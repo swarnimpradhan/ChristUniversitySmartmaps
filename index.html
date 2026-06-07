@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Christ University Kengeri - Campus Guide & Navigator</title>
+  
+  <!-- Google Fonts for Premium Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet.js Mapping Library CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+        crossorigin="" />
+
+  <!-- Lucide Icons Library (Script will run to replace icons dynamically) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Local App Stylesheets -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme"> <!-- Defaults to Dark Theme for premium look -->
+
+  <div class="app-container">
+    
+    <!-- Sidebar Panel: Controls, Search, Directions & Guides -->
+    <aside class="sidebar">
+      <!-- Sidebar Header -->
+      <header class="sidebar-header">
+        <div class="brand">
+          <div class="logo-placeholder">
+            <i data-lucide="map-pin" class="logo-icon"></i>
+          </div>
+          <div>
+            <h1>CHRIST</h1>
+            <span class="sub-brand">Kengeri Campus Navigator</span>
+          </div>
+        </div>
+        <button id="theme-toggle" class="theme-btn" title="Toggle Light/Dark Mode">
+          <i data-lucide="sun" class="sun-icon"></i>
+          <i data-lucide="moon" class="moon-icon"></i>
+        </button>
+      </header>
+
+      <div class="sidebar-content">
+        
+        <!-- Search and Autocomplete Section -->
+        <section class="search-section">
+          <div class="search-wrapper">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="search-input" placeholder="Search classrooms, labs, offices..." autocomplete="off">
+            <button id="clear-search" class="clear-btn" style="display: none;">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          <!-- Autocomplete results dropdown -->
+          <div id="suggestions-box" class="suggestions-box" style="display: none;"></div>
+        </section>
+
+        <!-- Category Filters -->
+        <section class="category-section">
+          <h3>Quick Category Filter</h3>
+          <div class="category-chips">
+            <button class="chip active" data-category="all">
+              <i data-lucide="grid" class="chip-icon"></i> All
+            </button>
+            <button class="chip" data-category="academic">
+              <i data-lucide="book-open" class="chip-icon"></i> Classes
+            </button>
+            <button class="chip" data-category="hostel">
+              <i data-lucide="home" class="chip-icon"></i> Hostels
+            </button>
+            <button class="chip" data-category="food">
+              <i data-lucide="coffee" class="chip-icon"></i> Dining
+            </button>
+            <button class="chip" data-category="sports">
+              <i data-lucide="trophy" class="chip-icon"></i> Sports
+            </button>
+          </div>
+        </section>
+
+        <!-- Navigation / Directions Planner -->
+        <section class="directions-section">
+          <div class="section-header">
+            <h3>Route Planner</h3>
+            <button id="swap-endpoints" class="icon-btn" title="Swap start and destination">
+              <i data-lucide="arrow-up-down"></i>
+            </button>
+          </div>
+          
+          <div class="route-inputs">
+            <div class="input-row">
+              <span class="dot green"></span>
+              <select id="start-select">
+                <option value="" disabled selected>Select Starting Point...</option>
+                <!-- Dynamically populated options -->
+              </select>
+            </div>
+            
+            <div class="input-row">
+              <span class="dot red"></span>
+              <select id="end-select">
+                <option value="" disabled selected>Select Destination...</option>
+                <!-- Dynamically populated options -->
+              </select>
+            </div>
+          </div>
+
+          <div class="button-group">
+            <button id="get-directions" class="btn primary-btn">
+              <i data-lucide="navigation"></i> Find Path
+            </button>
+            <button id="clear-route" class="btn secondary-btn" disabled>
+              Clear
+            </button>
+          </div>
+        </section>
+
+        <!-- Selected Location Details Panel -->
+        <section id="details-panel" class="details-panel card" style="display: none;">
+          <button class="panel-close-btn" id="close-details"><i data-lucide="x"></i></button>
+          <div class="card-header">
+            <div class="category-tag" id="details-category">Academic</div>
+            <h2 id="details-title">Academic Block I</h2>
+          </div>
+          <p class="description" id="details-desc">Description of the building goes here.</p>
+          
+          <div class="indoor-finder-section">
+            <h4><i data-lucide="layers"></i> Indoor Room Finder</h4>
+            <p class="helper-text">Select floor to view room blueprints:</p>
+            <div class="floor-selector" id="floor-buttons-container">
+              <!-- Dynamically populated floor buttons -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Route Directions Panel -->
+        <section id="route-panel" class="route-panel card" style="display: none;">
+          <div class="route-summary">
+            <div class="summary-item">
+              <i data-lucide="footprints" class="summary-icon green"></i>
+              <div>
+                <span class="summary-label">Distance</span>
+                <span class="summary-value" id="route-distance">0 m</span>
+              </div>
+            </div>
+            <div class="summary-item">
+              <i data-lucide="clock" class="summary-icon blue"></i>
+              <div>
+                <span class="summary-label">Est. Time</span>
+                <span class="summary-value" id="route-time">0 min</span>
+              </div>
+            </div>
+          </div>
+          
+          <h4>Step-by-Step Directions</h4>
+          <ol class="directions-list" id="directions-list">
+            <!-- Dynamically populated instructions -->
+          </ol>
+        </section>
+
+        <!-- Fresher's Class Schedule Shortcuts (Awesome Wow Factor!) -->
+        <section class="schedule-section">
+          <h3><i data-lucide="calendar"></i> Today's Schedule</h3>
+          <p class="helper-text">Quick route planner based on your timetable classes:</p>
+          <div class="schedule-list">
+            <div class="schedule-item" data-room="b1_room_101" data-building="block_1" data-floor="Second Floor">
+              <div class="time">09:00 AM</div>
+              <div class="details">
+                <span class="subject">Data Structures (CS 202)</span>
+                <span class="room">Block I, Floor 2, Room 101</span>
+              </div>
+              <button class="quick-nav-btn" title="Navigate here"><i data-lucide="compass"></i></button>
+            </div>
+            
+            <div class="schedule-item" data-room="b2_room_201" data-building="block_2" data-floor="First Floor">
+              <div class="time">11:30 AM</div>
+              <div class="details">
+                <span class="subject">Business Finance (MBA 105)</span>
+                <span class="room">Block II, Floor 1, Room 201</span>
+              </div>
+              <button class="quick-nav-btn" title="Navigate here"><i data-lucide="compass"></i></button>
+            </div>
+
+            <div class="schedule-item" data-room="b3_medical" data-building="block_3" data-floor="Ground Floor">
+              <div class="time">02:00 PM</div>
+              <div class="details">
+                <span class="subject">Health Checkup (Mandatory)</span>
+                <span class="room">Block III, Ground Floor, Medical Room</span>
+              </div>
+              <button class="quick-nav-btn" title="Navigate here"><i data-lucide="compass"></i></button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </aside>
+
+    <!-- Main Map Display and Indoor Layout Canvas -->
+    <main class="map-area">
+      <!-- Leaflet map container -->
+      <div id="map"></div>
+
+      <!-- Floor Plan Viewer: Overlays on top of the Map dynamically -->
+      <div id="floor-plan-viewer" class="floor-plan-viewer glass-panel" style="display: none;">
+        <header class="viewer-header">
+          <div class="header-title-wrapper">
+            <i data-lucide="building"></i>
+            <div>
+              <h3 id="floor-title">Block I - Ground Floor Blueprint</h3>
+              <span class="floor-sub">Interactive Room Blueprint</span>
+            </div>
+          </div>
+          <button id="close-floor-plan" class="icon-btn close-viewer-btn" title="Close Floor Plan">
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+
+        <!-- Dynamic Floor Plan Room Indicator / Legend -->
+        <div class="viewer-legend">
+          <span class="legend-item"><span class="color-box class"></span> Classroom</span>
+          <span class="legend-item"><span class="color-box lab"></span> Laboratory</span>
+          <span class="legend-item"><span class="color-box office"></span> Office / Admin</span>
+          <span class="legend-item"><span class="color-box restroom"></span> Restroom</span>
+          <span class="legend-item"><span class="color-box water"></span> Water</span>
+        </div>
+
+        <!-- The SVG Blueprint Container -->
+        <div class="svg-container">
+          <svg id="floor-plan-svg" viewBox="0 0 500 250" preserveAspectRatio="xMidYMid meet">
+            <!-- Dynamically populated SVG shapes -->
+          </svg>
+        </div>
+        <div class="viewer-footer">
+          <i data-lucide="info" class="footer-icon"></i>
+          <span>Click on any room to read details or copy room number.</span>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Leaflet.js Mapping Library Script -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+          crossorigin=""></script>
+  
+  <!-- Local App Logic Scripts -->
+  <script src="campusData.js"></script>
+  <script src="router.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
