@@ -42,6 +42,17 @@ function initMap() {
 
   // Add markers for the first time
   renderMarkers();
+
+  // Coordinate Calibration Listener (click on map to get exact coords)
+  map.on('click', (e) => {
+    // Avoid toast if click was on a marker pin or popup
+    const target = e.originalEvent.target;
+    if (target.classList.contains('marker-pin') || target.closest('.leaflet-popup')) {
+      return;
+    }
+    const coordString = `[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}]`;
+    showCoordToast(coordString);
+  });
 }
 
 // Render markers on map based on current filter category
@@ -513,5 +524,34 @@ function initTheme() {
     body.classList.add("dark-theme");
   }
   // Initialize Lucide Icons
+  lucide.createIcons();
+}
+
+// Show a sleek, copyable coordinate toast
+function showCoordToast(coordString) {
+  let toast = document.getElementById("coord-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "coord-toast";
+    toast.className = "coord-toast glass-panel";
+    document.body.appendChild(toast);
+  }
+  
+  toast.innerHTML = `
+    <div class="toast-content">
+      <span class="toast-title"><i data-lucide="compass" class="toast-icon"></i> Clicked Coordinates</span>
+      <span class="toast-coords">${coordString}</span>
+    </div>
+    <div class="toast-actions">
+      <button class="toast-btn copy-btn" onclick="navigator.clipboard.writeText('${coordString}'); alert('Copied: ${coordString}');">
+        <i data-lucide="copy" style="width: 14px; height: 14px; margin-right: 4px;"></i> Copy
+      </button>
+      <button class="toast-btn close-btn" onclick="document.getElementById('coord-toast').style.display='none';">
+        <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+      </button>
+    </div>
+  `;
+  
+  toast.style.display = "flex";
   lucide.createIcons();
 }
