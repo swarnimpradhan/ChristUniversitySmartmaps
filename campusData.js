@@ -213,24 +213,127 @@ const CAMPUS_DATA = {
     devadan: { id: "devadan", name: "Devadan Hall Entrance", latlng: [12.86037, 77.43943] }
   },
 
-  // Connections (edges) between walkway nodes.
-  // Weight represents estimated distance in meters.
-  // Direct text instructions assist in rendering readable directions.
   edges: [
-    { from: "gate", to: "junc_gate_bend", weight: 145, direction: "Walk south-east from the main entrance gate along the tree-lined driveway." },
-    { from: "junc_gate_bend", to: "mulsanne_south", weight: 170, direction: "Continue east along the main campus road towards the sports field." },
-    { from: "mulsanne_south", to: "sports", weight: 186, direction: "Walk south down the pathway adjacent to the sports ground." },
-    { from: "mulsanne_south", to: "block3_road", weight: 110, direction: "Walk east along the paved walkway south of the Mango Grove." },
-    { from: "block3_road", to: "block3", weight: 57, direction: "Head north to reach the Academic Block III entrance." },
-    { from: "block3_road", to: "canteen", weight: 57, direction: "Head north-west to reach the Food Court entrance." },
-    { from: "block3_road", to: "academic_plaza", weight: 68, direction: "Continue east into the main academic courtyard plaza." },
-    { from: "academic_plaza", to: "block2", weight: 87, direction: "Walk north-east across the courtyard directly into Academic Block II." },
-    { from: "academic_plaza", to: "block1", weight: 145, direction: "Walk south-west across the courtyard plaza towards Academic Block I." },
-    { from: "block1", to: "chapel", weight: 46, direction: "Walk east towards the Chapel Plaza." },
-    { from: "block1", to: "library", weight: 14, direction: "Step directly inside the Block I side wing to enter the library." },
-    { from: "block1", to: "junc_hostels", weight: 122, direction: "Walk south along the pedestrian pathway leading towards the hostel zone." },
-    { from: "junc_hostels", to: "jonas_hall", weight: 70, direction: "Continue south-west to reach the Jonas Hall Women's Hostel gate." },
-    { from: "junc_hostels", to: "hamilton_straight", weight: 187, direction: "Walk east along Hamilton Straight pathway." },
-    { from: "hamilton_straight", to: "devadan", weight: 87, direction: "Turn north-east into the Devadan Men's Hostel entryway." }
+    { 
+      from: "gate", 
+      to: "junc_gate_bend", 
+      weight: 145, 
+      direction: "Walk south-east from the main entrance gate along the tree-lined driveway.",
+      path: [
+        [12.86234, 77.43425],
+        [12.86241, 77.43458],
+        [12.86270, 77.43488]
+      ]
+    },
+    { 
+      from: "junc_gate_bend", 
+      to: "mulsanne_south", 
+      weight: 170, 
+      direction: "Continue east along the main campus road towards the sports field.",
+      path: [
+        [12.86272, 77.43560],
+        [12.86252, 77.43605]
+      ]
+    },
+    { 
+      from: "mulsanne_south", 
+      to: "sports", 
+      weight: 186, 
+      direction: "Walk south down the pathway adjacent to the sports ground." 
+    },
+    { 
+      from: "mulsanne_south", 
+      to: "block3_road", 
+      weight: 110, 
+      direction: "Walk east along the paved walkway south of the Mango Grove.",
+      path: [
+        [12.86235, 77.43700]
+      ]
+    },
+    { 
+      from: "block3_road", 
+      to: "block3", 
+      weight: 57, 
+      direction: "Head north to reach the Academic Block III entrance." 
+    },
+    { 
+      from: "block3_road", 
+      to: "canteen", 
+      weight: 57, 
+      direction: "Head north-west to reach the Food Court entrance." 
+    },
+    { 
+      from: "block3_road", 
+      to: "academic_plaza", 
+      weight: 68, 
+      direction: "Continue east into the main academic courtyard plaza.",
+      path: [
+        [12.86252, 77.43790]
+      ]
+    },
+    { 
+      from: "academic_plaza", 
+      to: "block2", 
+      weight: 87, 
+      direction: "Walk north-east across the courtyard directly into Academic Block II.",
+      path: [
+        [12.86235, 77.43840]
+      ]
+    },
+    { 
+      from: "academic_plaza", 
+      to: "block1", 
+      weight: 145, 
+      direction: "Walk south-west across the courtyard plaza towards Academic Block I.",
+      path: [
+        [12.86220, 77.43800],
+        [12.86180, 77.43788]
+      ]
+    },
+    { 
+      from: "block1", 
+      to: "chapel", 
+      weight: 46, 
+      direction: "Walk east towards the Chapel Plaza." 
+    },
+    { 
+      from: "block1", 
+      to: "library", 
+      weight: 14, 
+      direction: "Step directly inside the Block I side wing to enter the library." 
+    },
+    { 
+      from: "block1", 
+      to: "junc_hostels", 
+      weight: 122, 
+      direction: "Walk south along the pedestrian pathway leading towards the hostel zone.",
+      path: [
+        [12.86100, 77.43730]
+      ]
+    },
+    { 
+      from: "junc_hostels", 
+      to: "jonas_hall", 
+      weight: 70, 
+      direction: "Continue south-west to reach the Jonas Hall Women's Hostel gate." 
+    },
+    { 
+      from: "junc_hostels", 
+      to: "hamilton_straight", 
+      weight: 187, 
+      direction: "Walk east along Hamilton Straight pathway.",
+      path: [
+        [12.86060, 77.43780]
+      ]
+    },
+    { 
+      from: "hamilton_straight", 
+      to: "devadan", 
+      weight: 87, 
+      direction: "Turn north-east into the Devadan Men's Hostel entryway.",
+      path: [
+        [12.86048, 77.43910]
+      ]
+    }
   ]
 };

@@ -136,9 +136,36 @@ function findShortestPath(startNodeId, endNodeId) {
   }
 
   // 5. Gather geographic coordinates for drawing the line on the map (Leaflet Polyline)
-  const pathCoordinates = path.map(nodeId => {
-    return CAMPUS_DATA.nodes[nodeId].latlng;
-  });
+  const pathCoordinates = [];
+  if (path.length > 0) {
+    // Add the start node coordinate
+    pathCoordinates.push(CAMPUS_DATA.nodes[path[0]].latlng);
+    
+    for (let i = 0; i < path.length - 1; i++) {
+      const u = path[i];
+      const v = path[i+1];
+      
+      // Find the edge connecting u and v
+      const edge = CAMPUS_DATA.edges.find(e => 
+        (e.from === u && e.to === v) || (e.from === v && e.to === u)
+      );
+      
+      if (edge && edge.path && edge.path.length > 0) {
+        if (edge.from === u) {
+          // Forward direction: append path coordinates as defined
+          edge.path.forEach(pt => pathCoordinates.push(pt));
+        } else {
+          // Reverse direction: append path coordinates in reverse order
+          for (let j = edge.path.length - 1; j >= 0; j--) {
+            pathCoordinates.push(edge.path[j]);
+          }
+        }
+      }
+      
+      // Add the destination node coordinate of this segment
+      pathCoordinates.push(CAMPUS_DATA.nodes[v].latlng);
+    }
+  }
 
   // Calculate estimated walking time (average walking speed is roughly 1.3 meters per second)
   const totalDistanceMeters = distances[endNodeId];
