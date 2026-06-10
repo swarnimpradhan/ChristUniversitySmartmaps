@@ -303,7 +303,22 @@ const CAMPUS_DATA = {
     devadan: { id: "devadan", name: "Devadan Hall (Men's Hostel)", latlng: [12.859826, 77.440395] },
     north_canteen: { id: "north_canteen", name: "North Canteen", latlng: [12.859523, 77.439172] },
     devadan_ground: { id: "devadan_ground", name: "Devadan Ground", latlng: [12.859826, 77.440395] },
-    library: { id: "library", name: "Engineering Library", latlng: [12.863000, 77.437850] }
+    library: { id: "library", name: "Engineering Library", latlng: [12.863000, 77.437850] },
+
+    // Road grid intermediate nodes
+    road_gate_kns: { id: "road_gate_kns", name: "Main Driveway Curve", latlng: [12.862900, 77.436200] },
+    road_kns: { id: "road_kns", name: "KNS Walkway Junction", latlng: [12.862600, 77.436750] },
+    road_block1: { id: "road_block1", name: "Block I Walkway", latlng: [12.862950, 77.437800] },
+    road_block2: { id: "road_block2", name: "Block II Walkway", latlng: [12.862800, 77.438200] },
+    road_block3: { id: "road_block3", name: "Block III Walkway", latlng: [12.862650, 77.438700] },
+    road_block4: { id: "road_block4", name: "Block IV Walkway", latlng: [12.862550, 77.439050] },
+    road_block6: { id: "road_block6", name: "Block VI Walkway", latlng: [12.862300, 77.439700] },
+    road_devadan: { id: "road_devadan", name: "Devadan Walkway Junction", latlng: [12.860100, 77.440200] },
+    road_north_canteen: { id: "road_north_canteen", name: "Southern Campus Road Junction", latlng: [12.859600, 77.439100] },
+    road_chapel: { id: "road_chapel", name: "Chapel Walkway Junction", latlng: [12.860250, 77.437700] },
+    road_pu: { id: "road_pu", name: "PU Block Walkway Junction", latlng: [12.860280, 77.437100] },
+    road_sports: { id: "road_sports", name: "Sports Ground Road", latlng: [12.861750, 77.436600] },
+    road_block5: { id: "road_block5", name: "Block V Walkway", latlng: [12.861900, 77.438400] }
   },
 
   edges: [
@@ -314,127 +329,184 @@ const CAMPUS_DATA = {
     },
     { 
       from: "gate", 
-      to: "kns_canteen", 
-      direction: "Walk south-east along the main curved entrance road.",
+      to: "road_gate_kns", 
+      direction: "Walk south-east along the main entrance road.",
       path: [
-        [12.8634, 77.4355],
-        [12.8630, 77.4362],
+        [12.8634, 77.4355]
+      ]
+    },
+    { 
+      from: "road_gate_kns", 
+      to: "road_kns", 
+      direction: "Continue along the driveway to the KNS Canteen area.",
+      path: [
         [12.8627, 77.4366]
       ]
     },
     { 
-      from: "kns_canteen", 
+      from: "road_kns", 
+      to: "kns_canteen", 
+      direction: "Walk into the KNS Canteen."
+    },
+    { 
+      from: "road_kns", 
+      to: "road_sports", 
+      direction: "Walk south along the sports field perimeter road."
+    },
+    { 
+      from: "road_sports", 
       to: "sports", 
-      direction: "Walk south along the walkway to the Sports Ground."
+      direction: "Step onto the Sports Ground."
     },
     { 
-      from: "kns_canteen", 
-      to: "mba_canteen", 
-      direction: "Walk east along the main campus walkway past the mango grove."
+      from: "road_sports", 
+      to: "road_pu", 
+      direction: "Continue south along the perimeter road to the PU Block area."
     },
     { 
-      from: "kns_canteen", 
+      from: "road_pu", 
       to: "pu_block", 
-      direction: "Walk south-east along the footpath to the PU Block."
+      direction: "Walk into the PU Block."
     },
     { 
-      from: "mba_canteen", 
-      to: "block1", 
-      direction: "Walk east directly into the Academic Block I entryway."
+      from: "road_pu", 
+      to: "road_chapel", 
+      direction: "Walk east along the road towards the Chapel."
     },
     { 
-      from: "block1", 
-      to: "library", 
-      direction: "Step inside the side wing of Academic Block I to enter the library."
+      from: "road_chapel", 
+      to: "chapel", 
+      direction: "Walk into the St. Kuriakose Elias Chavara Chapel."
     },
     { 
-      from: "block1", 
-      to: "block2", 
-      direction: "Walk south-east across the main courtyard to Academic Block II."
+      from: "road_chapel", 
+      to: "road_block5", 
+      direction: "Walk north-east along the courtyard walkway past Block V."
     },
     { 
-      from: "block2", 
-      to: "open_air_auditorium", 
-      direction: "Walk east past the seating plaza to the Open Air Auditorium."
+      from: "road_block5", 
+      to: "block5", 
+      direction: "Step into Academic Block V."
     },
     { 
-      from: "open_air_auditorium", 
-      to: "block3", 
-      direction: "Walk east directly into the Academic Block III lobby."
+      from: "road_block5", 
+      to: "road_block1", 
+      direction: "Walk north-east along the walkway to Block I."
     },
     { 
-      from: "block3", 
-      to: "jonas_hall", 
-      direction: "Head slightly east to reach Jonas Hall Women's Hostel."
+      from: "road_chapel", 
+      to: "road_north_canteen", 
+      direction: "Walk east along the southern campus road to the North Canteen area."
     },
     { 
-      from: "block3", 
-      to: "block4", 
-      direction: "Walk east along the paved pathway connecting Block III and Block IV."
+      from: "road_north_canteen", 
+      to: "north_canteen", 
+      direction: "Step into the North Canteen."
     },
     { 
-      from: "block4", 
+      from: "road_north_canteen", 
+      to: "architecture_block", 
+      direction: "Walk north into the Architecture Block."
+    },
+    { 
+      from: "road_north_canteen", 
+      to: "road_devadan", 
+      direction: "Walk east along the southern road to the Devadan complex."
+    },
+    { 
+      from: "road_devadan", 
+      to: "devadan", 
+      direction: "Walk into Devadan Hall Men's Hostel."
+    },
+    { 
+      from: "road_devadan", 
+      to: "devadan_ground", 
+      direction: "Step onto the Devadan Ground."
+    },
+    { 
+      from: "road_devadan", 
+      to: "road_block6", 
+      direction: "Walk north along the lakeside pathway to the Block VI area."
+    },
+    { 
+      from: "road_block6", 
+      to: "block6", 
+      direction: "Step into Academic Block VI."
+    },
+    { 
+      from: "road_block6", 
       to: "south_canteen", 
-      direction: "Walk south-east to the South Canteen dining plaza."
+      direction: "Walk west along the path to the South Canteen."
     },
     { 
       from: "south_canteen", 
-      to: "block6", 
-      direction: "Walk east along the footpath to Academic Block VI."
+      to: "road_block4", 
+      direction: "Walk north-west to the road in front of Block IV."
     },
     { 
-      from: "block6", 
-      to: "devadan", 
-      direction: "Walk south along the lake-side footpath towards the Devadan hostel complex.",
+      from: "road_block4", 
+      to: "block4", 
+      direction: "Step into Academic Block IV."
+    },
+    { 
+      from: "road_block4", 
+      to: "road_block3", 
+      direction: "Walk north-west along the main road to the Block III area."
+    },
+    { 
+      from: "road_block3", 
+      to: "block3", 
+      direction: "Step into Academic Block III."
+    },
+    { 
+      from: "road_block3", 
+      to: "jonas_hall", 
+      direction: "Step into Jonas Hall Women's Hostel."
+    },
+    { 
+      from: "road_block3", 
+      to: "open_air_auditorium", 
+      direction: "Walk into the Open Air Auditorium."
+    },
+    { 
+      from: "road_block3", 
+      to: "road_block2", 
+      direction: "Walk north-west along the main road to the Block II area."
+    },
+    { 
+      from: "road_block2", 
+      to: "block2", 
+      direction: "Step into Academic Block II."
+    },
+    { 
+      from: "road_block2", 
+      to: "road_block1", 
+      direction: "Walk north-west along the main road to the Block I area."
+    },
+    { 
+      from: "road_block1", 
+      to: "block1", 
+      direction: "Step into Academic Block I."
+    },
+    { 
+      from: "road_block1", 
+      to: "library", 
+      direction: "Step into the Engineering Library."
+    },
+    { 
+      from: "road_block1", 
+      to: "mba_canteen", 
+      direction: "Walk north to the MBA Canteen."
+    },
+    { 
+      from: "road_kns", 
+      to: "road_block1", 
+      direction: "Walk north-east along the paved walkway curving around the mango grove.",
       path: [
-        [12.8610, 77.4401],
-        [12.8604, 77.4402]
+        [12.862550, 77.437100],
+        [12.862700, 77.437500],
+        [12.862850, 77.437750]
       ]
-    },
-    { 
-      from: "devadan", 
-      to: "devadan_ground", 
-      direction: "Walk directly onto the Devadan sports field."
-    },
-    { 
-      from: "devadan", 
-      to: "north_canteen", 
-      direction: "Walk west along the southern campus road to North Canteen."
-    },
-    { 
-      from: "north_canteen", 
-      to: "architecture_block", 
-      direction: "Walk north-west to the Architecture Block."
-    },
-    { 
-      from: "north_canteen", 
-      to: "chapel", 
-      direction: "Walk west along the pedestrian road to the Chavara Chapel."
-    },
-    { 
-      from: "chapel", 
-      to: "pu_block", 
-      direction: "Walk west along the main campus road to the PU Block."
-    },
-    { 
-      from: "chapel", 
-      to: "architecture_block", 
-      direction: "Walk east along the road to the Architecture Block."
-    },
-    { 
-      from: "pu_block", 
-      to: "sports", 
-      direction: "Walk north along the path bordering the sports field."
-    },
-    { 
-      from: "block1", 
-      to: "block5", 
-      direction: "Walk south from Block I past the plaza to Academic Block V."
-    },
-    { 
-      from: "block5", 
-      to: "architecture_block", 
-      direction: "Walk south from Block V to the Architecture Block."
     }
   ]
 };
