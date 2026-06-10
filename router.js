@@ -12,6 +12,31 @@
  */
 
 function findShortestPath(startNodeId, endNodeId) {
+  // Helper to calculate Haversine distance in meters between two node coordinates
+  function calculateDistance(nodeId1, nodeId2) {
+    const n1 = CAMPUS_DATA.nodes[nodeId1];
+    const n2 = CAMPUS_DATA.nodes[nodeId2];
+    if (!n1 || !n2) return 50;
+
+    const lat1 = n1.latlng[0];
+    const lon1 = n1.latlng[1];
+    const lat2 = n2.latlng[0];
+    const lon2 = n2.latlng[1];
+
+    const R = 6371000; // radius of Earth in meters
+    const phi1 = lat1 * Math.PI / 180;
+    const phi2 = lat2 * Math.PI / 180;
+    const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+              Math.cos(phi1) * Math.cos(phi2) *
+              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return Math.round(R * c);
+  }
+
   // 1. Build an "Adjacency List" graph representation.
   // This converts our simple list of edges into a dictionary of nodes where each node
   // maps to a list of its connected neighbors and the walking details.
@@ -25,22 +50,23 @@ function findShortestPath(startNodeId, endNodeId) {
   // Populate neighbors. Since walkways are bidirectional, we add the path both ways:
   // A to B AND B to A.
   CAMPUS_DATA.edges.forEach(edge => {
+    // Determine weight: use defined weight or calculate dynamically using coordinates
+    const weight = edge.weight || calculateDistance(edge.from, edge.to);
+
     // Forward direction (from -> to)
     if (graph[edge.from]) {
       graph[edge.from].push({
         to: edge.to,
-        weight: edge.weight,
+        weight: weight,
         direction: edge.direction
       });
     }
     // Reverse direction (to -> from)
     if (graph[edge.to]) {
-      // For walking backwards, we can use the same instruction, or adapt it.
-      // We reverse the description slightly for natural reading if needed, or keep it standard.
       graph[edge.to].push({
         to: edge.from,
-        weight: edge.weight,
-        direction: edge.direction // In this prototype, we'll use the same text
+        weight: weight,
+        direction: edge.direction
       });
     }
   });

@@ -10,15 +10,26 @@ let selectedBuildingId = null;
 // to pathway node IDs (from campusData.js nodes list)
 const buildingToNodeMap = {
   gate: "gate",
+  second_gate: "second_gate",
   block_1: "block1",
   block_2: "block2",
   block_3: "block3",
+  block_4: "block4",
+  block_5: "block5",
+  block_6: "block6",
   library: "library",
-  canteen: "canteen",
+  mba_canteen: "mba_canteen",
+  south_canteen: "south_canteen",
+  north_canteen: "north_canteen",
+  kns_canteen: "kns_canteen",
+  open_air_auditorium: "open_air_auditorium",
   devadan: "devadan",
   jonas_hall: "jonas_hall",
   sports: "sports",
-  chapel: "chapel"
+  pu_block: "pu_block",
+  architecture_block: "architecture_block",
+  chapel: "chapel",
+  devadan_ground: "devadan_ground"
 };
 
 // 1. Initialize Application

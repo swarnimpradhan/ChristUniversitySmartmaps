@@ -6,7 +6,7 @@
 
 const CAMPUS_DATA = {
   // Center of the map when it loads (Christ University Kengeri Campus)
-  center: [12.8615, 77.4370],
+  center: [12.8620, 77.4375],
   zoom: 18,
 
   // List of key landmarks & buildings on campus
@@ -15,7 +15,7 @@ const CAMPUS_DATA = {
       id: "gate",
       name: "Main Entrance Gate",
       description: "Primary entrance on Mysore Road. Visitor registration and security check post.",
-      coordinates: [12.86259, 77.43381],
+      coordinates: [12.863837, 77.434811],
       category: "admin",
       floors: {}
     },
@@ -23,7 +23,7 @@ const CAMPUS_DATA = {
       id: "block_1",
       name: "Academic Block I",
       description: "Houses the School of Engineering and Technology, administrative offices, director's room, main library, and admissions reception.",
-      coordinates: [12.86141, 77.43773],
+      coordinates: [12.863032, 77.437944],
       category: "academic",
       floors: {
         "Ground Floor": {
@@ -71,7 +71,7 @@ const CAMPUS_DATA = {
       id: "block_2",
       name: "Academic Block II",
       description: "Houses the School of Business and Management, MBA classrooms, lecture halls, and faculty cabins.",
-      coordinates: [12.86196, 77.43855],
+      coordinates: [12.862849, 77.438309],
       category: "academic",
       floors: {
         "Ground Floor": {
@@ -104,7 +104,7 @@ const CAMPUS_DATA = {
       id: "block_3",
       name: "Academic Block III",
       description: "Houses the School of Architecture, School of Humanities, Central Cafeteria, and the Campus Medical Room.",
-      coordinates: [12.86275, 77.43715],
+      coordinates: [12.862624, 77.438845],
       category: "academic",
       floors: {
         "Ground Floor": {
@@ -135,7 +135,7 @@ const CAMPUS_DATA = {
       id: "library",
       name: "Engineering Library (Block I)",
       description: "Located within Academic Block I. Contains engineering literature, research papers, and digital study rooms.",
-      coordinates: [12.8615, 77.4376],
+      coordinates: [12.863000, 77.437850],
       category: "academic",
       floors: {
         "Ground Floor": {
@@ -150,43 +150,131 @@ const CAMPUS_DATA = {
         }
       }
     },
-    canteen: {
-      id: "canteen",
-      name: "Main Cafeteria & Food Court",
-      description: "Dining area located adjacent to Block III. Offers North/South Indian dishes, beverages, and snack counters.",
-      coordinates: [12.8627, 77.43715],
-      category: "food",
+    second_gate: {
+      id: "second_gate",
+      name: "Second Gate",
+      description: "Alternative entry gate on Mysore Road, close to the northern end of campus.",
+      coordinates: [12.864695, 77.435465],
+      category: "admin",
       floors: {}
     },
-    devadan: {
-      id: "devadan",
-      name: "Devadan Hall (Men's Hostel)",
-      description: "Major on-campus residential hall for male students. Equipped with study halls, indoor sports room, and a gym.",
-      coordinates: [12.86037, 77.43943],
-      category: "hostel",
+    block_4: {
+      id: "block_4",
+      name: "Academic Block IV",
+      description: "Academic building featuring lecture halls, computer labs, and department offices.",
+      coordinates: [12.862515, 77.439151],
+      category: "academic",
+      floors: {}
+    },
+    block_5: {
+      id: "block_5",
+      name: "Academic Block V",
+      description: "Academic building containing faculty research offices, classrooms, and study rooms.",
+      coordinates: [12.861892, 77.438475],
+      category: "academic",
+      floors: {}
+    },
+    block_6: {
+      id: "block_6",
+      name: "Academic Block VI",
+      description: "New academic wing equipped with smart classrooms and research labs.",
+      coordinates: [12.862243, 77.439843],
+      category: "academic",
       floors: {}
     },
     jonas_hall: {
       id: "jonas_hall",
       name: "Jonas Hall (Women's Hostel)",
       description: "Secure residential hall for female students (PU/UG/PG). Includes shared study halls, gym, and in-house recreation center.",
-      coordinates: [12.86015, 77.43733],
+      coordinates: [12.862598, 77.438893],
       category: "hostel",
+      floors: {}
+    },
+    devadan: {
+      id: "devadan",
+      name: "Devadan Hall (Men's Hostel)",
+      description: "Major on-campus residential hall for male students. Equipped with study halls, indoor sports room, and a gym.",
+      coordinates: [12.859826, 77.440395],
+      category: "hostel",
+      floors: {}
+    },
+    devadan_ground: {
+      id: "devadan_ground",
+      name: "Devadan Ground",
+      description: "Spacious outdoor sports ground located next to Devadan Hall hostel.",
+      coordinates: [12.859826, 77.440395],
+      category: "sports",
+      floors: {}
+    },
+    mba_canteen: {
+      id: "mba_canteen",
+      name: "MBA Canteen",
+      description: "Cafeteria offering meals, snacks, and beverages next to Block II.",
+      coordinates: [12.863181, 77.437668],
+      category: "food",
+      floors: {}
+    },
+    south_canteen: {
+      id: "south_canteen",
+      name: "South Canteen",
+      description: "Food counter serving authentic South Indian delicacies, snacks, and fresh juices.",
+      coordinates: [12.862321, 77.439344],
+      category: "food",
+      floors: {}
+    },
+    north_canteen: {
+      id: "north_canteen",
+      name: "North Canteen",
+      description: "Food court offering North Indian meals, street food, and beverages.",
+      coordinates: [12.859523, 77.439172],
+      category: "food",
+      floors: {}
+    },
+    kns_canteen: {
+      id: "kns_canteen",
+      name: "KNS Canteen",
+      description: "Cafeteria and snack shop located near the sports ground.",
+      coordinates: [12.862556, 77.436801],
+      category: "food",
+      floors: {}
+    },
+    open_air_auditorium: {
+      id: "open_air_auditorium",
+      name: "Open Air Auditorium",
+      description: "Large outdoor auditorium for student performances, events, and gatherings.",
+      coordinates: [12.862758, 77.438612],
+      category: "academic",
       floors: {}
     },
     sports: {
       id: "sports",
-      name: "Sports Ground & Running Track",
+      name: "Sports Ground",
       description: "Main sports venue on the west side of campus, housing the football ground, running track, and basketball courts.",
-      coordinates: [12.86154, 77.43503],
+      coordinates: [12.861767, 77.436512],
       category: "sports",
+      floors: {}
+    },
+    pu_block: {
+      id: "pu_block",
+      name: "PU Block",
+      description: "Academic building hosting Pre-University courses and classrooms.",
+      coordinates: [12.860213, 77.437139],
+      category: "academic",
+      floors: {}
+    },
+    architecture_block: {
+      id: "architecture_block",
+      name: "Architecture Block",
+      description: "Dedicated block containing drafting studios, labs, and classrooms for the School of Architecture.",
+      coordinates: [12.860036, 77.438394],
+      category: "academic",
       floors: {}
     },
     chapel: {
       id: "chapel",
-      name: "University Chapel Plaza",
-      description: "A serene prayer hall in the center of the campus, close to Block I and Block II, open to all students.",
-      coordinates: [12.86149, 77.43815],
+      name: "St. Kuriakose Elias Chavara Chapel",
+      description: "A serene prayer hall in the center of the campus, open to all students.",
+      coordinates: [12.860192, 77.437745],
       category: "admin",
       floors: {}
     }
@@ -195,145 +283,158 @@ const CAMPUS_DATA = {
   // Walks & intersection network for routing.
   // Each node is a physical point on the campus walkways.
   nodes: {
-    gate: { id: "gate", name: "Main Gate Checkpost", latlng: [12.86259, 77.43381] },
-    junc_gate_bend: { id: "junc_gate_bend", name: "Main Driveway Curve", latlng: [12.86292, 77.43511] },
-    mulsanne_south: { id: "mulsanne_south", name: "Sports Complex Crossroads", latlng: [12.86232, 77.43656] },
-    sports: { id: "sports", name: "Sports Complex Gate", latlng: [12.86154, 77.43503] },
-    block3_road: { id: "block3_road", name: "Block III Southern Access Path", latlng: [12.86244, 77.43757] },
-    block3: { id: "block3", name: "Block III Main Entrance", latlng: [12.86275, 77.43715] },
-    canteen: { id: "canteen", name: "Central Food Court Entrance", latlng: [12.8627, 77.43715] },
-    academic_plaza: { id: "academic_plaza", name: "Academic Central Courtyard", latlng: [12.86265, 77.43816] },
-    block1: { id: "block1", name: "Block I Main Entrance", latlng: [12.86141, 77.43773] },
-    block2: { id: "block2", name: "Block II Main Entrance", latlng: [12.86196, 77.43855] },
-    library: { id: "library", name: "Library Entrance", latlng: [12.8615, 77.4375] },
-    chapel: { id: "chapel", name: "Chapel Entrance", latlng: [12.86149, 77.43815] },
-    junc_hostels: { id: "junc_hostels", name: "Hostel Zone Footpath", latlng: [12.86064, 77.43692] },
-    jonas_hall: { id: "jonas_hall", name: "Jonas Hall Entrance", latlng: [12.86015, 77.43733] },
-    hamilton_straight: { id: "hamilton_straight", name: "Hamilton Straight Walkway", latlng: [12.86058, 77.43865] },
-    devadan: { id: "devadan", name: "Devadan Hall Entrance", latlng: [12.86037, 77.43943] }
+    gate: { id: "gate", name: "Main Entrance Gate", latlng: [12.863837, 77.434811] },
+    second_gate: { id: "second_gate", name: "Second Gate", latlng: [12.864695, 77.435465] },
+    sports: { id: "sports", name: "Sports Ground", latlng: [12.861767, 77.436512] },
+    kns_canteen: { id: "kns_canteen", name: "KNS Canteen", latlng: [12.862556, 77.436801] },
+    pu_block: { id: "pu_block", name: "PU Block", latlng: [12.860213, 77.437139] },
+    chapel: { id: "chapel", name: "St. Kuriakose Elias Chavara Chapel", latlng: [12.860192, 77.437745] },
+    mba_canteen: { id: "mba_canteen", name: "MBA Canteen", latlng: [12.863181, 77.437668] },
+    block1: { id: "block1", name: "Academic Block I", latlng: [12.863032, 77.437944] },
+    block2: { id: "block2", name: "Academic Block II", latlng: [12.862849, 77.438309] },
+    open_air_auditorium: { id: "open_air_auditorium", name: "Open Air Auditorium", latlng: [12.862758, 77.438612] },
+    block3: { id: "block3", name: "Academic Block III", latlng: [12.862624, 77.438845] },
+    jonas_hall: { id: "jonas_hall", name: "Jonas Hall (Women's Hostel)", latlng: [12.862598, 77.438893] },
+    block4: { id: "block4", name: "Academic Block IV", latlng: [12.862515, 77.439151] },
+    block5: { id: "block5", name: "Academic Block V", latlng: [12.861892, 77.438475] },
+    south_canteen: { id: "south_canteen", name: "South Canteen", latlng: [12.862321, 77.439344] },
+    block6: { id: "block6", name: "Academic Block VI", latlng: [12.862243, 77.439843] },
+    architecture_block: { id: "architecture_block", name: "Architecture Block", latlng: [12.860036, 77.438394] },
+    devadan: { id: "devadan", name: "Devadan Hall (Men's Hostel)", latlng: [12.859826, 77.440395] },
+    north_canteen: { id: "north_canteen", name: "North Canteen", latlng: [12.859523, 77.439172] },
+    devadan_ground: { id: "devadan_ground", name: "Devadan Ground", latlng: [12.859826, 77.440395] },
+    library: { id: "library", name: "Engineering Library", latlng: [12.863000, 77.437850] }
   },
 
   edges: [
     { 
       from: "gate", 
-      to: "junc_gate_bend", 
-      weight: 145, 
-      direction: "Walk south-east from the main entrance gate along the tree-lined driveway.",
+      to: "second_gate", 
+      direction: "Walk north-east along the boundary road to the Second Gate."
+    },
+    { 
+      from: "gate", 
+      to: "kns_canteen", 
+      direction: "Walk south-east along the main curved entrance road.",
       path: [
-        [12.86234, 77.43425],
-        [12.86241, 77.43458],
-        [12.86270, 77.43488]
+        [12.8634, 77.4355],
+        [12.8630, 77.4362],
+        [12.8627, 77.4366]
       ]
     },
     { 
-      from: "junc_gate_bend", 
-      to: "mulsanne_south", 
-      weight: 170, 
-      direction: "Continue east along the main campus road towards the sports field.",
-      path: [
-        [12.86272, 77.43560],
-        [12.86252, 77.43605]
-      ]
-    },
-    { 
-      from: "mulsanne_south", 
+      from: "kns_canteen", 
       to: "sports", 
-      weight: 186, 
-      direction: "Walk south down the pathway adjacent to the sports ground." 
+      direction: "Walk south along the walkway to the Sports Ground."
     },
     { 
-      from: "mulsanne_south", 
-      to: "block3_road", 
-      weight: 110, 
-      direction: "Walk east along the paved walkway south of the Mango Grove.",
-      path: [
-        [12.86235, 77.43700]
-      ]
+      from: "kns_canteen", 
+      to: "mba_canteen", 
+      direction: "Walk east along the main campus walkway past the mango grove."
     },
     { 
-      from: "block3_road", 
-      to: "block3", 
-      weight: 57, 
-      direction: "Head north to reach the Academic Block III entrance." 
+      from: "kns_canteen", 
+      to: "pu_block", 
+      direction: "Walk south-east along the footpath to the PU Block."
     },
     { 
-      from: "block3_road", 
-      to: "canteen", 
-      weight: 57, 
-      direction: "Head north-west to reach the Food Court entrance." 
-    },
-    { 
-      from: "block3_road", 
-      to: "academic_plaza", 
-      weight: 68, 
-      direction: "Continue east into the main academic courtyard plaza.",
-      path: [
-        [12.86252, 77.43790]
-      ]
-    },
-    { 
-      from: "academic_plaza", 
-      to: "block2", 
-      weight: 87, 
-      direction: "Walk north-east across the courtyard directly into Academic Block II.",
-      path: [
-        [12.86235, 77.43840]
-      ]
-    },
-    { 
-      from: "academic_plaza", 
+      from: "mba_canteen", 
       to: "block1", 
-      weight: 145, 
-      direction: "Walk south-west across the courtyard plaza towards Academic Block I.",
-      path: [
-        [12.86220, 77.43800],
-        [12.86180, 77.43788]
-      ]
-    },
-    { 
-      from: "block1", 
-      to: "chapel", 
-      weight: 46, 
-      direction: "Walk east towards the Chapel Plaza." 
+      direction: "Walk east directly into the Academic Block I entryway."
     },
     { 
       from: "block1", 
       to: "library", 
-      weight: 14, 
-      direction: "Step directly inside the Block I side wing to enter the library." 
+      direction: "Step inside the side wing of Academic Block I to enter the library."
     },
     { 
       from: "block1", 
-      to: "junc_hostels", 
-      weight: 122, 
-      direction: "Walk south along the pedestrian pathway leading towards the hostel zone.",
-      path: [
-        [12.86100, 77.43730]
-      ]
+      to: "block2", 
+      direction: "Walk south-east across the main courtyard to Academic Block II."
     },
     { 
-      from: "junc_hostels", 
+      from: "block2", 
+      to: "open_air_auditorium", 
+      direction: "Walk east past the seating plaza to the Open Air Auditorium."
+    },
+    { 
+      from: "open_air_auditorium", 
+      to: "block3", 
+      direction: "Walk east directly into the Academic Block III lobby."
+    },
+    { 
+      from: "block3", 
       to: "jonas_hall", 
-      weight: 70, 
-      direction: "Continue south-west to reach the Jonas Hall Women's Hostel gate." 
+      direction: "Head slightly east to reach Jonas Hall Women's Hostel."
     },
     { 
-      from: "junc_hostels", 
-      to: "hamilton_straight", 
-      weight: 187, 
-      direction: "Walk east along Hamilton Straight pathway.",
-      path: [
-        [12.86060, 77.43780]
-      ]
+      from: "block3", 
+      to: "block4", 
+      direction: "Walk east along the paved pathway connecting Block III and Block IV."
     },
     { 
-      from: "hamilton_straight", 
+      from: "block4", 
+      to: "south_canteen", 
+      direction: "Walk south-east to the South Canteen dining plaza."
+    },
+    { 
+      from: "south_canteen", 
+      to: "block6", 
+      direction: "Walk east along the footpath to Academic Block VI."
+    },
+    { 
+      from: "block6", 
       to: "devadan", 
-      weight: 87, 
-      direction: "Turn north-east into the Devadan Men's Hostel entryway.",
+      direction: "Walk south along the lake-side footpath towards the Devadan hostel complex.",
       path: [
-        [12.86048, 77.43910]
+        [12.8610, 77.4401],
+        [12.8604, 77.4402]
       ]
+    },
+    { 
+      from: "devadan", 
+      to: "devadan_ground", 
+      direction: "Walk directly onto the Devadan sports field."
+    },
+    { 
+      from: "devadan", 
+      to: "north_canteen", 
+      direction: "Walk west along the southern campus road to North Canteen."
+    },
+    { 
+      from: "north_canteen", 
+      to: "architecture_block", 
+      direction: "Walk north-west to the Architecture Block."
+    },
+    { 
+      from: "north_canteen", 
+      to: "chapel", 
+      direction: "Walk west along the pedestrian road to the Chavara Chapel."
+    },
+    { 
+      from: "chapel", 
+      to: "pu_block", 
+      direction: "Walk west along the main campus road to the PU Block."
+    },
+    { 
+      from: "chapel", 
+      to: "architecture_block", 
+      direction: "Walk east along the road to the Architecture Block."
+    },
+    { 
+      from: "pu_block", 
+      to: "sports", 
+      direction: "Walk north along the path bordering the sports field."
+    },
+    { 
+      from: "block1", 
+      to: "block5", 
+      direction: "Walk south from Block I past the plaza to Academic Block V."
+    },
+    { 
+      from: "block5", 
+      to: "architecture_block", 
+      direction: "Walk south from Block V to the Architecture Block."
     }
   ]
 };
