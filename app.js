@@ -6,6 +6,16 @@ let currentCategory = "all";
 let highlightedRoomId = null;
 let selectedBuildingId = null;
 
+// Walkway Graph Editor State
+let editorActive = false;
+let editorMode = "add"; // 'add', 'connect', 'delete'
+let selectedNodeId = null;
+let customNodes = {};
+let customEdges = [];
+let editorMarkers = [];
+let editorPolylines = [];
+let pendingLatLng = null;
+
 // Map building IDs (from campusData.js buildings list) 
 // to pathway node IDs (from campusData.js nodes list)
 const buildingToNodeMap = {
@@ -54,8 +64,21 @@ function initMap() {
   // Add markers for the first time
   renderMarkers();
 
-  // Coordinate Calibration Listener (click on map to get exact coords)
+  // Coordinate Calibration Listener (click on map to get exact coords or add node in editor)
   map.on('click', (e) => {
+    if (editorActive) {
+      if (editorMode === "add") {
+        pendingLatLng = e.latlng;
+        // Open the node registration form
+        document.getElementById("node-creation-form").style.display = "block";
+        document.getElementById("new-node-id").value = `road_junction_${Date.now().toString().slice(-4)}`;
+        document.getElementById("new-node-name").value = "";
+        document.getElementById("new-node-id").focus();
+        updateEditorStatus(`Clicked coord: [${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}]. Enter ID and Name below.`);
+      }
+      return;
+    }
+    
     // Avoid toast if click was on a marker pin or popup
     const target = e.originalEvent.target;
     if (target.classList.contains('marker-pin') || target.closest('.leaflet-popup')) {
@@ -522,6 +545,77 @@ function setupEventListeners() {
       selectBuilding(buildingId, floorName);
     });
   });
+
+  // Walkway Editor Listeners
+  document.getElementById("editor-toggle").addEventListener("click", toggleEditor);
+  document.getElementById("close-editor").addEventListener("click", toggleEditor);
+  
+  // Mode Selection Buttons
+  const modeButtons = document.querySelectorAll(".editor-mode-btn");
+  modeButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      modeButtons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      editorMode = btn.dataset.mode;
+      selectedNodeId = null;
+      document.getElementById("node-creation-form").style.display = "none";
+      updateEditorStatus(`Switched to ${editorMode.toUpperCase()} mode.`);
+      renderEditorGraph();
+    });
+  });
+
+  // Save Node Form Button
+  document.getElementById("save-new-node").addEventListener("click", () => {
+    const nodeId = document.getElementById("new-node-id").value.trim();
+    const nodeName = document.getElementById("new-node-name").value.trim();
+    
+    if (!nodeId || !nodeName) {
+      alert("Please enter both a Node ID and a Display Name!");
+      return;
+    }
+    
+    if (customNodes[nodeId]) {
+      alert("A node with this ID already exists! Please use a unique ID.");
+      return;
+    }
+    
+    // Create new node at clicked position
+    customNodes[nodeId] = {
+      id: nodeId,
+      name: nodeName,
+      latlng: [parseFloat(pendingLatLng.lat.toFixed(6)), parseFloat(pendingLatLng.lng.toFixed(6))]
+    };
+    
+    document.getElementById("node-creation-form").style.display = "none";
+    updateEditorStatus(`Created node "${nodeName}" (${nodeId}) at [${customNodes[nodeId].latlng.join(', ')}]`);
+    renderEditorGraph();
+  });
+
+  // Export Modal Buttons
+  document.getElementById("btn-export-json").addEventListener("click", exportGraphJSON);
+  document.getElementById("close-export-modal").addEventListener("click", () => {
+    document.getElementById("export-modal").style.display = "none";
+  });
+  
+  // Copy Code Buttons inside export modal
+  const copyButtons = document.querySelectorAll(".copy-code-btn");
+  copyButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.dataset.target;
+      const textarea = document.getElementById(targetId);
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value);
+      btn.innerHTML = `<i data-lucide="check" style="width: 12px; height: 12px; margin-right: 4px;"></i> Copied`;
+      lucide.createIcons();
+      setTimeout(() => {
+        btn.innerHTML = `<i data-lucide="copy" style="width: 12px; height: 12px; margin-right: 4px;"></i> Copy`;
+        lucide.createIcons();
+      }, 2000);
+    });
+  });
+
+  // Reset/Clear Graph Button
+  document.getElementById("btn-clear-editor").addEventListener("click", resetCustomGraph);
 }
 
 // Check localStorage for saved user theme preference
@@ -565,4 +659,253 @@ function showCoordToast(coordString) {
   
   toast.style.display = "flex";
   lucide.createIcons();
+}
+
+// ==========================================
+// WALKWAY GRAPH EDITOR CORE FUNCTIONALITY
+// ==========================================
+
+function toggleEditor() {
+  const editorBtn = document.getElementById("editor-toggle");
+  const editorPanel = document.getElementById("walkway-editor");
+  
+  editorActive = !editorActive;
+  
+  if (editorActive) {
+    editorBtn.classList.add("active");
+    editorPanel.style.display = "block";
+    
+    // Clear normal route drawing
+    if (routePolyline) {
+      map.removeLayer(routePolyline);
+      routePolyline = null;
+    }
+    
+    // Clear normal marker overlays
+    activeMarkers.forEach(m => map.removeLayer(m));
+    activeMarkers = [];
+    
+    // Hide details panel card
+    document.getElementById("details-panel").style.display = "none";
+    document.getElementById("floor-plan-viewer").style.display = "none";
+    
+    // Initialize custom nodes/edges if empty
+    if (Object.keys(customNodes).length === 0) {
+      customNodes = JSON.parse(JSON.stringify(CAMPUS_DATA.nodes));
+      customEdges = JSON.parse(JSON.stringify(CAMPUS_DATA.edges));
+    }
+    
+    updateEditorStatus("Graph Editor Active. Select mode: Add, Connect, or Delete.");
+    renderEditorGraph();
+  } else {
+    editorBtn.classList.remove("active");
+    editorPanel.style.display = "none";
+    document.getElementById("node-creation-form").style.display = "none";
+    
+    // Remove all editor layers
+    editorMarkers.forEach(m => map.removeLayer(m));
+    editorPolylines.forEach(p => map.removeLayer(p));
+    editorMarkers = [];
+    editorPolylines = [];
+    
+    // Inject custom graph into live mapping runtime
+    CAMPUS_DATA.nodes = customNodes;
+    CAMPUS_DATA.edges = customEdges;
+    
+    // Restore normal map pins
+    renderMarkers();
+  }
+}
+
+function renderEditorGraph() {
+  // Clear existing layers
+  editorMarkers.forEach(m => map.removeLayer(m));
+  editorPolylines.forEach(p => map.removeLayer(p));
+  editorMarkers = [];
+  editorPolylines = [];
+
+  // Draw lines for edges
+  customEdges.forEach(edge => {
+    const fromNode = customNodes[edge.from];
+    const toNode = customNodes[edge.to];
+    if (fromNode && toNode) {
+      let latlngs = [fromNode.latlng];
+      if (edge.path && edge.path.length > 0) {
+        latlngs = latlngs.concat(edge.path);
+      }
+      latlngs.push(toNode.latlng);
+
+      const isHighlight = edge.from === selectedNodeId || edge.to === selectedNodeId;
+      const poly = L.polyline(latlngs, {
+        color: isHighlight ? "#10b981" : "#06b6d4",
+        weight: isHighlight ? 5 : 3,
+        opacity: 0.7,
+        dashArray: isHighlight ? "5, 5" : null
+      }).addTo(map);
+
+      // Edge click deletion (delete mode)
+      poly.on("click", (e) => {
+        L.DomEvent.stopPropagation(e);
+        if (editorMode === "delete") {
+          if (confirm(`Delete connection between ${edge.from} and ${edge.to}?`)) {
+            customEdges = customEdges.filter(e => e !== edge);
+            renderEditorGraph();
+            updateEditorStatus(`Deleted connection between ${edge.from} and ${edge.to}.`);
+          }
+        }
+      });
+
+      editorPolylines.push(poly);
+    }
+  });
+
+  // Draw circular markers for nodes
+  for (const nodeId in customNodes) {
+    const node = customNodes[nodeId];
+    const isSelected = nodeId === selectedNodeId;
+
+    const marker = L.marker(node.latlng, {
+      icon: L.divIcon({
+        className: `mapper-node-marker ${isSelected ? 'selected' : ''}`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      }),
+      draggable: true
+    }).addTo(map);
+
+    // Save coords on dragend
+    marker.on("dragend", (e) => {
+      const newLatLng = e.target.getLatLng();
+      node.latlng = [parseFloat(newLatLng.lat.toFixed(6)), parseFloat(newLatLng.lng.toFixed(6))];
+      
+      // Update matching building metadata coordinate if it is a building
+      if (CAMPUS_DATA.buildings[nodeId]) {
+        CAMPUS_DATA.buildings[nodeId].coordinates = node.latlng;
+      }
+      
+      renderEditorGraph();
+      updateEditorStatus(`Dragged node "${node.name}" to: [${node.latlng.join(', ')}]`);
+    });
+
+    marker.on("click", (e) => {
+      L.DomEvent.stopPropagation(e);
+      handleNodeClick(nodeId);
+    });
+
+    marker.bindTooltip(`${node.name}<br><span style="font-family: monospace; font-size:10px;">${nodeId}</span>`, { 
+      permanent: false, 
+      direction: 'top',
+      className: 'glass-panel'
+    });
+
+    editorMarkers.push(marker);
+  }
+}
+
+function handleNodeClick(nodeId) {
+  if (editorMode === "connect") {
+    if (!selectedNodeId) {
+      selectedNodeId = nodeId;
+      updateEditorStatus(`Source node selected: ${nodeId}. Now click target node to create path.`);
+      renderEditorGraph();
+    } else {
+      if (selectedNodeId === nodeId) {
+        selectedNodeId = null;
+        updateEditorStatus("Deselected source node.");
+        renderEditorGraph();
+      } else {
+        connectNodes(selectedNodeId, nodeId);
+        selectedNodeId = null;
+        renderEditorGraph();
+      }
+    }
+  } else if (editorMode === "delete") {
+    deleteNode(nodeId);
+  } else {
+    // Inspect/Select Node
+    selectedNodeId = nodeId;
+    const node = customNodes[nodeId];
+    updateEditorStatus(`Node: ${node.name} (${nodeId}) at [${node.latlng.join(', ')}]. Drag to move.`);
+    renderEditorGraph();
+  }
+}
+
+function connectNodes(fromId, toId) {
+  // Check duplicates
+  const exists = customEdges.some(e => 
+    (e.from === fromId && e.to === toId) || (e.from === toId && e.to === fromId)
+  );
+
+  if (exists) {
+    updateEditorStatus(`Walkway link already exists between ${fromId} and ${toId}!`);
+    return;
+  }
+
+  const addCurve = confirm(`Do you want to add curve/corner coordinates for the path between ${fromId} and ${toId}?\n\nIf Yes, you can specify intermediate waypoints. If No, a straight line will connect them.`);
+  let waypoints = [];
+  if (addCurve) {
+    const coordsStr = prompt("Enter intermediate coordinate waypoints as JSON array (e.g. [[12.8627, 77.4375]]):", "[]");
+    try {
+      if (coordsStr) {
+        waypoints = JSON.parse(coordsStr);
+      }
+    } catch(err) {
+      alert("Invalid JSON coordinates! Connecting directly instead.");
+    }
+  }
+
+  const direction = prompt(`Enter directional walking text (optional):`, `Walk from ${customNodes[fromId].name} to ${customNodes[toId].name}.`);
+
+  const newEdge = {
+    from: fromId,
+    to: toId,
+    direction: direction || `Walk between ${fromId} and ${toId}.`
+  };
+
+  if (waypoints.length > 0) {
+    newEdge.path = waypoints;
+  }
+
+  customEdges.push(newEdge);
+  updateEditorStatus(`Connected path from ${fromId} to ${toId}.`);
+}
+
+function deleteNode(nodeId) {
+  if (confirm(`Delete node "${nodeId}"? This deletes the node and all connected pathways.`)) {
+    delete customNodes[nodeId];
+    customEdges = customEdges.filter(e => e.from !== nodeId && e.to !== nodeId);
+    if (selectedNodeId === nodeId) {
+      selectedNodeId = null;
+    }
+    renderEditorGraph();
+    updateEditorStatus(`Deleted node ${nodeId}.`);
+  }
+}
+
+function updateEditorStatus(text) {
+  const statusDiv = document.getElementById("editor-selection-status");
+  if (statusDiv) {
+    statusDiv.textContent = text;
+  }
+}
+
+function exportGraphJSON() {
+  const nodesCode = document.getElementById("export-nodes-code");
+  const edgesCode = document.getElementById("export-edges-code");
+
+  nodesCode.value = JSON.stringify(customNodes, null, 2);
+  edgesCode.value = JSON.stringify(customEdges, null, 2);
+
+  document.getElementById("export-modal").style.display = "flex";
+  lucide.createIcons();
+}
+
+function resetCustomGraph() {
+  if (confirm("Reset walkway editor to campusData.js defaults? All current unsaved workspace changes will be lost.")) {
+    customNodes = JSON.parse(JSON.stringify(CAMPUS_DATA.nodes));
+    customEdges = JSON.parse(JSON.stringify(CAMPUS_DATA.edges));
+    selectedNodeId = null;
+    renderEditorGraph();
+    updateEditorStatus("Graph reset to campusData.js defaults.");
+  }
 }

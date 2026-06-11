@@ -19,7 +19,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- Local App Stylesheets -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body class="dark-theme"> <!-- Defaults to Dark Theme for premium look -->
 
@@ -38,10 +38,15 @@
             <span class="sub-brand">Kengeri Campus Navigator</span>
           </div>
         </div>
-        <button id="theme-toggle" class="theme-btn" title="Toggle Light/Dark Mode">
-          <i data-lucide="sun" class="sun-icon"></i>
-          <i data-lucide="moon" class="moon-icon"></i>
-        </button>
+        <div class="header-actions">
+          <button id="editor-toggle" class="editor-btn" title="Toggle Walkway Editor">
+            <i data-lucide="pencil-ruler"></i>
+          </button>
+          <button id="theme-toggle" class="theme-btn" title="Toggle Light/Dark Mode">
+            <i data-lucide="sun" class="sun-icon"></i>
+            <i data-lucide="moon" class="moon-icon"></i>
+          </button>
+        </div>
       </header>
 
       <div class="sidebar-content">
@@ -236,6 +241,92 @@
         <div class="viewer-footer">
           <i data-lucide="info" class="footer-icon"></i>
           <span>Click on any room to read details or copy room number.</span>
+        </div>
+      </div>
+
+      <!-- Walkway Editor Control Panel (Floating Glass Panel) -->
+      <div id="walkway-editor" class="walkway-editor glass-panel" style="display: none;">
+        <header class="editor-header">
+          <div class="editor-title-wrapper">
+            <i data-lucide="pencil-ruler" class="editor-title-icon"></i>
+            <div>
+              <h3>Walkway Graph Editor</h3>
+              <span class="editor-sub">Manually Map Nodes & Connections</span>
+            </div>
+          </div>
+          <button id="close-editor" class="icon-btn close-editor-btn" title="Close Editor">
+            <i data-lucide="x"></i>
+          </button>
+        </header>
+
+        <div class="editor-body">
+          <p class="editor-help">Click anywhere on the map to add a new routing node. Select a node to start connecting paths.</p>
+          
+          <div class="editor-mode-selector">
+            <button id="btn-mode-add" class="editor-mode-btn active" data-mode="add">
+              <i data-lucide="plus-circle"></i> Add Node
+            </button>
+            <button id="btn-mode-connect" class="editor-mode-btn" data-mode="connect">
+              <i data-lucide="git-commit"></i> Connect Nodes
+            </button>
+            <button id="btn-mode-delete" class="editor-mode-btn" data-mode="delete">
+              <i data-lucide="trash-2"></i> Delete
+            </button>
+          </div>
+
+          <div id="editor-selection-status" class="editor-status">
+            No node selected. Click a node to select it.
+          </div>
+
+          <div class="editor-form" id="node-creation-form" style="display: none;">
+            <div class="form-row">
+              <label for="new-node-id">Node ID:</label>
+              <input type="text" id="new-node-id" placeholder="e.g., road_junction_1">
+            </div>
+            <div class="form-row">
+              <label for="new-node-name">Display Name:</label>
+              <input type="text" id="new-node-name" placeholder="e.g., Library Junction">
+            </div>
+            <button id="save-new-node" class="btn primary-btn btn-sm">Save Node</button>
+          </div>
+
+          <div class="editor-actions">
+            <button id="btn-export-json" class="btn primary-btn btn-full">
+              <i data-lucide="download"></i> Export Graph Data
+            </button>
+            <button id="btn-clear-editor" class="btn secondary-btn btn-full">
+              Reset Custom Nodes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- JSON Export Overlay Modal -->
+      <div id="export-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass-panel">
+          <header class="modal-header">
+            <h3>Exported Campus Graph Data</h3>
+            <button id="close-export-modal" class="icon-btn"><i data-lucide="x"></i></button>
+          </header>
+          <div class="modal-body">
+            <p>Copy the following JSON blocks and paste them directly into your <code>campusData.js</code> file to save your changes permanently.</p>
+            
+            <div class="code-export-section">
+              <div class="code-header">
+                <span>nodes: { ... }</span>
+                <button class="copy-code-btn" data-target="export-nodes-code"><i data-lucide="copy"></i> Copy</button>
+              </div>
+              <textarea id="export-nodes-code" readonly></textarea>
+            </div>
+
+            <div class="code-export-section">
+              <div class="code-header">
+                <span>edges: [ ... ]</span>
+                <button class="copy-code-btn" data-target="export-edges-code"><i data-lucide="copy"></i> Copy</button>
+              </div>
+              <textarea id="export-edges-code" readonly></textarea>
+            </div>
+          </div>
         </div>
       </div>
     </main>
