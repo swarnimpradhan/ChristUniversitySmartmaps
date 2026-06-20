@@ -333,6 +333,23 @@
 
   </div>
 
+  <!-- Floating Chatbot Widget -->
+  <button id="chatbot-launcher" class="chatbot-launcher-btn" title="Ask Campus Assistant">
+    <i data-lucide="message-square"></i>
+  </button>
+
+  <div id="chatbot-widget-container" class="chatbot-widget-container glass-panel" style="display: none;">
+    <header class="widget-header">
+      <div class="header-title">
+        <i data-lucide="message-square" class="header-icon"></i>
+        <span>Campus Assistant</span>
+      </div>
+      <button id="close-chatbot-widget" class="close-widget-btn"><i data-lucide="x"></i></button>
+    </header>
+    <iframe src="smart chatbot/dist/index.html" id="chatbot-iframe"></iframe>
+  </div>
+
+
   <!-- Leaflet.js Mapping Library Script -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
