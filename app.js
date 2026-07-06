@@ -619,60 +619,7 @@ function setupEventListeners() {
   // Reset/Clear Graph Button
   document.getElementById("btn-clear-editor").addEventListener("click", resetCustomGraph);
 
-  // Chatbot Widget toggle listeners
-  const chatbotLauncher = document.getElementById("chatbot-launcher");
-  const chatbotContainer = document.getElementById("chatbot-widget-container");
-  const closeChatbotBtn = document.getElementById("close-chatbot-widget");
 
-  if (chatbotLauncher && chatbotContainer && closeChatbotBtn) {
-    chatbotLauncher.addEventListener("click", () => {
-      if (chatbotContainer.style.display === "none") {
-        chatbotContainer.style.display = "flex";
-        chatbotLauncher.style.transform = "scale(0) rotate(180deg)";
-        chatbotLauncher.style.opacity = "0";
-      } else {
-        chatbotContainer.style.display = "none";
-      }
-    });
-
-    closeChatbotBtn.addEventListener("click", () => {
-      chatbotContainer.style.display = "none";
-      chatbotLauncher.style.transform = "scale(1) rotate(0deg)";
-      chatbotLauncher.style.opacity = "1";
-    });
-  }
-
-  // Listen for deep-links/commands from the chatbot iframe
-  window.addEventListener("message", (event) => {
-    if (event.data && event.data.type === "MAP_COMMAND") {
-      const params = new URLSearchParams(event.data.params);
-      const searchVal = params.get("search");
-      const startVal = params.get("start");
-      const endVal = params.get("end");
-
-      if (searchVal) {
-        const searchInput = document.getElementById("search-input");
-        if (searchInput) {
-          searchInput.value = searchVal;
-          handleSearchInput();
-          setTimeout(() => {
-            const suggestions = document.querySelectorAll(".suggestion-item");
-            if (suggestions.length > 0) {
-              suggestions[0].click();
-            }
-          }, 300);
-        }
-      } else if (startVal && endVal) {
-        const startSelect = document.getElementById("start-select");
-        const endSelect = document.getElementById("end-select");
-        if (startSelect && endSelect) {
-          startSelect.value = startVal;
-          endSelect.value = endVal;
-          getDirections();
-        }
-      }
-    }
-  });
 }
 
 
