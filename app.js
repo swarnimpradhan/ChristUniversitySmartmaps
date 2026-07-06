@@ -141,13 +141,50 @@ function populateDropdowns() {
   // Sort buildings alphabetically for the dropdown list
   const sortedBuildings = Object.values(CAMPUS_DATA.buildings).sort((a, b) => a.name.localeCompare(b.name));
 
+  // Add Buildings to Landmarks optgroup
+  const startBuildingsGroup = document.createElement("optgroup");
+  startBuildingsGroup.label = "Campus Landmarks & Buildings";
+  const endBuildingsGroup = document.createElement("optgroup");
+  endBuildingsGroup.label = "Campus Landmarks & Buildings";
+
   sortedBuildings.forEach(building => {
-    // We only add items that are mapped to pathway graph nodes
     if (buildingToNodeMap[building.id]) {
-      const option1 = new Option(building.name, building.id);
-      const option2 = new Option(building.name, building.id);
-      startSelect.add(option1);
-      endSelect.add(option2);
+      startBuildingsGroup.appendChild(new Option(building.name, `building:${building.id}`));
+      endBuildingsGroup.appendChild(new Option(building.name, `building:${building.id}`));
+    }
+  });
+  
+  startSelect.appendChild(startBuildingsGroup);
+  endSelect.appendChild(endBuildingsGroup);
+
+  // Add Rooms to Building-specific optgroups
+  sortedBuildings.forEach(building => {
+    const floors = building.floors || {};
+    const floorNames = Object.keys(floors);
+    if (floorNames.length > 0) {
+      const startRoomGroup = document.createElement("optgroup");
+      startRoomGroup.label = `${building.name} Rooms`;
+      const endRoomGroup = document.createElement("optgroup");
+      endRoomGroup.label = `${building.name} Rooms`;
+
+      let hasRooms = false;
+      floorNames.forEach(floorName => {
+        const rooms = floors[floorName].rooms || [];
+        rooms.forEach(room => {
+          if (room.type !== "corridor") {
+            const displayName = `${room.name} (${floorName})`;
+            const value = `room:${building.id}:${floorName}:${room.id}`;
+            startRoomGroup.appendChild(new Option(displayName, value));
+            endRoomGroup.appendChild(new Option(displayName, value));
+            hasRooms = true;
+          }
+        });
+      });
+
+      if (hasRooms) {
+        startSelect.appendChild(startRoomGroup);
+        endSelect.appendChild(endRoomGroup);
+      }
     }
   });
 }
@@ -280,6 +317,119 @@ function renderFloorPlan(buildingId, floorName) {
   });
 }
 
+// Helper to calculate distance in meters between two latlng points
+function getDistanceBetweenCoords(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Earth radius in meters
+  const phi1 = lat1 * Math.PI / 180;
+  const phi2 = lat2 * Math.PI / 180;
+  const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+  const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+            Math.cos(phi1) * Math.cos(phi2) *
+            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Find nearest graph node to coordinate
+function findNearestNode(lat, lng) {
+  let nearestNodeId = null;
+  let minDistance = Infinity;
+
+  for (const nodeId in CAMPUS_DATA.nodes) {
+    const node = CAMPUS_DATA.nodes[nodeId];
+    const dist = getDistanceBetweenCoords(lat, lng, node.latlng[0], node.latlng[1]);
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearestNodeId = nodeId;
+    }
+  }
+  return nearestNodeId;
+}
+
+// Text-to-speech engine
+function speakDirections(text) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  
+  const voices = window.speechSynthesis.getVoices();
+  const englishVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural')));
+  if (englishVoice) {
+    utterance.voice = englishVoice;
+  }
+  window.speechSynthesis.speak(utterance);
+}
+
+// Helper to look up room display name
+function getRoomNameById(buildingId, floorName, roomId) {
+  const building = CAMPUS_DATA.buildings[buildingId];
+  if (!building || !building.floors[floorName]) return roomId;
+  const room = building.floors[floorName].rooms.find(r => r.id === roomId);
+  return room ? room.name : roomId;
+}
+
+// Global user GPS location tracking variables
+let userMarker = null;
+let userHeading = 0;
+
+// Render GPS indicator on Leaflet map
+function updateUserLocation(lat, lng, heading = null) {
+  const userCoords = [lat, lng];
+  const rotationStyle = heading !== null ? `transform: rotate(${heading}deg);` : 'display: none;';
+  
+  const customHtml = `
+    <div class="user-location-marker">
+      <div class="user-heading-pointer" style="${rotationStyle}"></div>
+      <div class="user-pulsing-dot"></div>
+    </div>
+  `;
+  
+  const userIcon = L.divIcon({
+    className: 'user-gps-icon',
+    html: customHtml,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+  });
+
+  if (userMarker) {
+    userMarker.setLatLng(userCoords);
+    userMarker.setIcon(userIcon);
+  } else {
+    userMarker = L.marker(userCoords, { icon: userIcon }).addTo(map);
+  }
+}
+
+// Listen to absolute compass device orientation events
+function setupOrientationListener() {
+  if (window.DeviceOrientationEvent) {
+    if ('ondeviceorientationabsolute' in window) {
+      window.addEventListener('deviceorientationabsolute', (event) => {
+        if (event.alpha !== null) {
+          userHeading = 360 - event.alpha;
+          if (userMarker) {
+            updateUserLocation(userMarker.getLatLng().lat, userMarker.getLatLng().lng, userHeading);
+          }
+        }
+      });
+    } else {
+      window.addEventListener('deviceorientation', (event) => {
+        if (event.webkitCompassHeading !== undefined) {
+          userHeading = event.webkitCompassHeading;
+        } else if (event.alpha !== null) {
+          userHeading = 360 - event.alpha;
+        }
+        if (userMarker) {
+          updateUserLocation(userMarker.getLatLng().lat, userMarker.getLatLng().lng, userHeading);
+        }
+      });
+    }
+  }
+}
+
 // 6. Navigation Route Calculation
 function getDirections() {
   const startVal = document.getElementById("start-select").value;
@@ -295,52 +445,179 @@ function getDirections() {
     return;
   }
 
-  // Get corresponding nodes
-  const startNode = buildingToNodeMap[startVal];
-  const endNode = buildingToNodeMap[endVal];
+  // Parse start option values
+  let startBuildingId = "";
+  let startNode = "";
+  let startRoomInfo = null;
 
-  // Call Dijkstra pathfinder from router.js
-  const route = findShortestPath(startNode, endNode);
+  if (startVal.startsWith("building:")) {
+    startBuildingId = startVal.substring(9);
+    startNode = buildingToNodeMap[startBuildingId];
+  } else if (startVal.startsWith("room:")) {
+    const parts = startVal.split(":");
+    startBuildingId = parts[1];
+    startNode = buildingToNodeMap[startBuildingId];
+    startRoomInfo = {
+      buildingId: parts[1],
+      floorName: parts[2],
+      roomId: parts[3]
+    };
+  } else if (startVal.startsWith("gps:")) {
+    const parts = startVal.split(":");
+    const lat = parseFloat(parts[1]);
+    const lng = parseFloat(parts[2]);
+    startBuildingId = "gps";
+    startNode = findNearestNode(lat, lng);
+  }
 
-  if (route) {
-    // Clear previous polyline
-    if (routePolyline) {
-      map.removeLayer(routePolyline);
+  // Parse end option values
+  let endBuildingId = "";
+  let endNode = "";
+  let endRoomInfo = null;
+
+  if (endVal.startsWith("building:")) {
+    endBuildingId = endVal.substring(9);
+    endNode = buildingToNodeMap[endBuildingId];
+  } else if (endVal.startsWith("room:")) {
+    const parts = endVal.split(":");
+    endBuildingId = parts[1];
+    endNode = buildingToNodeMap[endBuildingId];
+    endRoomInfo = {
+      buildingId: parts[1],
+      floorName: parts[2],
+      roomId: parts[3]
+    };
+  }
+
+  let instructions = [];
+  let totalDistance = 0;
+  let totalTime = 0;
+  let outdoorRoute = null;
+
+  // 1. Calculate outdoor shortest path if start & end buildings are different
+  if (startBuildingId !== endBuildingId) {
+    outdoorRoute = findShortestPath(startNode, endNode);
+    if (!outdoorRoute) {
+      alert("Sorry, could not find a walking route between these locations.");
+      return;
     }
+    totalDistance += outdoorRoute.totalDistance;
+    totalTime += outdoorRoute.totalTime;
+  }
 
-    // Draw route on map
-    // We add a styled class name to create the dashed animation
-    routePolyline = L.polyline(route.coordinates, {
-      color: "#10b981", // Emerald green route color
+  // 2. Build indoor starting directions
+  if (startRoomInfo) {
+    const bName = CAMPUS_DATA.buildings[startRoomInfo.buildingId].name;
+    const rName = getRoomNameById(startRoomInfo.buildingId, startRoomInfo.floorName, startRoomInfo.roomId);
+    instructions.push(`Start inside ${bName} at ${rName} (${startRoomInfo.floorName}).`);
+    
+    if (startRoomInfo.floorName !== "Ground Floor") {
+      instructions.push(`Take the staircase or elevator down to the Ground Floor and exit the building.`);
+      totalDistance += 15;
+      totalTime += 1;
+    } else {
+      instructions.push(`Exit the building onto the campus walkway.`);
+      totalDistance += 5;
+      totalTime += 0.5;
+    }
+  } else if (startBuildingId === "gps") {
+    instructions.push("Start from your current GPS location.");
+  }
+
+  // 3. Append outdoor steps
+  if (outdoorRoute) {
+    instructions = instructions.concat(outdoorRoute.instructions);
+  }
+
+  // 4. Build indoor ending directions
+  if (endRoomInfo) {
+    const bName = CAMPUS_DATA.buildings[endRoomInfo.buildingId].name;
+    const rName = getRoomNameById(endRoomInfo.buildingId, endRoomInfo.floorName, endRoomInfo.roomId);
+    
+    instructions.push(`Enter ${bName} through the ground floor entrance.`);
+    if (endRoomInfo.floorName !== "Ground Floor") {
+      instructions.push(`Go up to the ${endRoomInfo.floorName} using the stairs or lift.`);
+      totalDistance += 15;
+      totalTime += 1;
+    }
+    instructions.push(`Arrive at your classroom/destination: ${rName}.`);
+  } else {
+    const destName = CAMPUS_DATA.buildings[endBuildingId].name;
+    instructions.push(`Arrive at your destination: ${destName}.`);
+  }
+
+  // Render on map
+  if (routePolyline) {
+    map.removeLayer(routePolyline);
+  }
+
+  if (outdoorRoute) {
+    routePolyline = L.polyline(outdoorRoute.coordinates, {
+      color: "#10b981",
       weight: 5,
       opacity: 0.8,
       className: "animated-path"
     }).addTo(map);
 
-    // Zoom and pan map to fit the calculated route nicely
     map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+  } else if (startBuildingId !== "gps") {
+    // Zoom directly to the single building since it's an indoor-only route
+    const coords = CAMPUS_DATA.buildings[startBuildingId].coordinates;
+    map.setView(coords, 19);
+  }
 
-    // Show directions UI
-    const routePanel = document.getElementById("route-panel");
-    const distanceVal = document.getElementById("route-distance");
-    const timeVal = document.getElementById("route-time");
-    const directionsList = document.getElementById("directions-list");
+  // Show directions panel
+  const routePanel = document.getElementById("route-panel");
+  const distanceVal = document.getElementById("route-distance");
+  const timeVal = document.getElementById("route-time");
+  const directionsList = document.getElementById("directions-list");
 
-    routePanel.style.display = "block";
-    distanceVal.textContent = `${route.totalDistance} m`;
-    timeVal.textContent = `${route.totalTime} min`;
+  routePanel.style.display = "block";
+  distanceVal.textContent = `${Math.round(totalDistance)} m`;
+  timeVal.textContent = `${Math.round(totalTime)} min`;
 
-    // Populate turn-by-turn lists
-    directionsList.innerHTML = "";
-    route.instructions.forEach(step => {
-      const li = document.createElement("li");
-      li.textContent = step;
-      directionsList.appendChild(li);
+  // Populate turn-by-turn list with text-to-speech triggers
+  directionsList.innerHTML = "";
+  instructions.forEach((step) => {
+    const li = document.createElement("li");
+    li.style.display = "flex";
+    li.style.justifyContent = "space-between";
+    li.style.alignItems = "center";
+    li.style.marginBottom = "8px";
+
+    const textSpan = document.createElement("span");
+    textSpan.textContent = step;
+    li.appendChild(textSpan);
+
+    const speakBtn = document.createElement("button");
+    speakBtn.className = "icon-btn speak-step-btn";
+    speakBtn.innerHTML = '<i data-lucide="volume-2" style="width: 14px; height: 14px;"></i>';
+    speakBtn.title = "Speak step";
+    speakBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      speakDirections(step);
     });
+    li.appendChild(speakBtn);
 
-    document.getElementById("clear-route").disabled = false;
-  } else {
-    alert("Sorry, could not find a walking route between these locations.");
+    directionsList.appendChild(li);
+  });
+
+  lucide.createIcons();
+  document.getElementById("clear-route").disabled = false;
+
+  // Auto-open indoor floor plans if destination is a room
+  if (endRoomInfo) {
+    highlightedRoomId = endRoomInfo.roomId;
+    selectBuilding(endRoomInfo.buildingId, endRoomInfo.floorName);
+  }
+
+  // Announce calculation voice response
+  const voiceToggle = document.getElementById("voice-guidance-toggle");
+  if (voiceToggle && voiceToggle.checked) {
+    const distanceText = `${Math.round(totalDistance)} meters`;
+    const timeText = totalTime < 1 ? "less than a minute" : `${Math.round(totalTime)} minutes`;
+    const announcement = `Route found. Total walking distance is ${distanceText}, taking about ${timeText}. Your first step is: ${instructions[0]}`;
+    speakDirections(announcement);
   }
 }
 
@@ -434,10 +711,28 @@ function handleSearchInput() {
         if (match.type === "building") {
           highlightedRoomId = null;
           selectBuilding(match.id);
+          const endSelect = document.getElementById("end-select");
+          endSelect.value = `building:${match.id}`;
         } else if (match.type === "room") {
           // Highlight room in SVG plan
           highlightedRoomId = match.id;
           selectBuilding(match.buildingId, match.floorName);
+          const endSelect = document.getElementById("end-select");
+          const val = `room:${match.buildingId}:${match.floorName}:${match.id}`;
+          
+          let optionFound = false;
+          for (let i = 0; i < endSelect.options.length; i++) {
+            if (endSelect.options[i].value === val) {
+              endSelect.value = val;
+              optionFound = true;
+              break;
+            }
+          }
+          if (!optionFound) {
+            const opt = new Option(`${match.title} (${match.floorName})`, val);
+            endSelect.add(opt);
+            endSelect.value = val;
+          }
         }
       });
 
@@ -535,11 +830,30 @@ function setupEventListeners() {
       const floorName = item.dataset.floor;
       const roomId = item.dataset.room;
 
-      // Set starting location to Main Gate automatically (good fresher default)
-      document.getElementById("start-select").value = "gate";
-      document.getElementById("end-select").value = buildingId;
+      const startSelect = document.getElementById("start-select");
+      const endSelect = document.getElementById("end-select");
       
-      // Calculate and draw the path
+      // Default starting point is the gate (as building:gate) unless user has active GPS location
+      if (!startSelect.value) {
+        startSelect.value = "building:gate";
+      }
+      
+      const val = `room:${buildingId}:${floorName}:${roomId}`;
+      let optionFound = false;
+      for (let i = 0; i < endSelect.options.length; i++) {
+        if (endSelect.options[i].value === val) {
+          endSelect.value = val;
+          optionFound = true;
+          break;
+        }
+      }
+      if (!optionFound) {
+        const roomName = getRoomNameById(buildingId, floorName, roomId);
+        const opt = new Option(`${roomName} (${floorName})`, val);
+        endSelect.add(opt);
+        endSelect.value = val;
+      }
+      
       getDirections();
 
       // Highlight target room and open floor blueprint
@@ -547,6 +861,73 @@ function setupEventListeners() {
       selectBuilding(buildingId, floorName);
     });
   });
+
+  // GPS Geolocation trigger
+  const locateMeBtn = document.getElementById("locate-me");
+  if (locateMeBtn) {
+    locateMeBtn.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser!");
+        return;
+      }
+      
+      locateMeBtn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locating...';
+      lucide.createIcons();
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          let lat = position.coords.latitude;
+          let lng = position.coords.longitude;
+          
+          const campusCenter = CAMPUS_DATA.center;
+          const distanceToCampus = getDistanceBetweenCoords(lat, lng, campusCenter[0], campusCenter[1]);
+          
+          let isMocked = false;
+          if (distanceToCampus > 1200) {
+            lat = 12.863837;
+            lng = 77.434811;
+            isMocked = true;
+          }
+
+          updateUserLocation(lat, lng, userHeading);
+          map.setView([lat, lng], 19);
+
+          const startSelect = document.getElementById("start-select");
+          for (let i = startSelect.options.length - 1; i >= 0; i--) {
+            if (startSelect.options[i].value.startsWith("gps:")) {
+              startSelect.remove(i);
+            }
+          }
+
+          const gpsVal = `gps:${lat}:${lng}`;
+          const label = isMocked ? "My Mock Location (Gate)" : "My Current Location";
+          const option = new Option(label, gpsVal);
+          startSelect.add(option, 1);
+          startSelect.value = gpsVal;
+
+          locateMeBtn.innerHTML = '<i data-lucide="check" style="width: 14px; height: 14px; margin-right: 6px;"></i> Located';
+          lucide.createIcons();
+
+          if (isMocked) {
+            alert("Sandbox Mock Active: You are currently outside the Kengeri campus. Simulating your location at the Main Entrance Gate for pathway routing tests!");
+          }
+
+          setTimeout(() => {
+            locateMeBtn.innerHTML = '<i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locate Me';
+            lucide.createIcons();
+          }, 3000);
+
+          setupOrientationListener();
+        },
+        (error) => {
+          alert(`Error getting location: ${error.message}`);
+          locateMeBtn.innerHTML = '<i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locate Me';
+          lucide.createIcons();
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  }
 
   // Walkway Editor Listeners
   document.getElementById("editor-toggle").addEventListener("click", toggleEditor);
@@ -938,8 +1319,11 @@ function parseUrlParameters() {
       const startSelect = document.getElementById("start-select");
       const endSelect = document.getElementById("end-select");
       if (startSelect && endSelect) {
-        startSelect.value = startVal;
-        endSelect.value = endVal;
+        const fullStart = (startVal.startsWith("building:") || startVal.startsWith("room:") || startVal.startsWith("gps:")) ? startVal : `building:${startVal}`;
+        const fullEnd = (endVal.startsWith("building:") || endVal.startsWith("room:") || endVal.startsWith("gps:")) ? endVal : `building:${endVal}`;
+        
+        startSelect.value = fullStart;
+        endSelect.value = fullEnd;
         getDirections();
       }
     }, 200);

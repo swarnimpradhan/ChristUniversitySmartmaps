@@ -20,6 +20,14 @@
 
   <!-- Local App Stylesheets -->
   <link rel="stylesheet" href="style.css?v=3">
+
+  <!-- PWA Manifest & Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#10b981">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Campus Nav">
+  <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="dark-theme"> <!-- Defaults to Dark Theme for premium look -->
 
@@ -117,9 +125,22 @@
             <button id="get-directions" class="btn primary-btn">
               <i data-lucide="navigation"></i> Find Path
             </button>
+            <button id="locate-me" class="btn locate-btn" title="Use current GPS location">
+              <i data-lucide="map-pin"></i> Locate Me
+            </button>
             <button id="clear-route" class="btn secondary-btn" disabled>
               Clear
             </button>
+          </div>
+
+          <div class="voice-guidance-container" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+            <label class="switch">
+              <input type="checkbox" id="voice-guidance-toggle">
+              <span class="slider"></span>
+            </label>
+            <span style="font-size: 13px; color: var(--text-primary); display: flex; align-items: center; gap: 4px;">
+              <i data-lucide="volume-2" style="width: 14px; height: 14px; color: var(--primary);"></i> Voice Guidance
+            </span>
           </div>
         </section>
 
@@ -343,5 +364,16 @@
   <script src="campusData.js?v=2"></script>
   <script src="router.js?v=2"></script>
   <script src="app.js?v=2"></script>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker registered successfully:', reg.scope))
+          .catch((err) => console.error('Service Worker registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
