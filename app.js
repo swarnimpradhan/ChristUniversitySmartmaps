@@ -348,21 +348,7 @@ function findNearestNode(lat, lng) {
   return nearestNodeId;
 }
 
-// Text-to-speech engine
-function speakDirections(text) {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1.0;
-  utterance.pitch = 1.0;
-  
-  const voices = window.speechSynthesis.getVoices();
-  const englishVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural')));
-  if (englishVoice) {
-    utterance.voice = englishVoice;
-  }
-  window.speechSynthesis.speak(utterance);
-}
+
 
 // Helper to look up room display name
 function getRoomNameById(buildingId, floorName, roomId) {
@@ -576,48 +562,20 @@ function getDirections() {
   distanceVal.textContent = `${Math.round(totalDistance)} m`;
   timeVal.textContent = `${Math.round(totalTime)} min`;
 
-  // Populate turn-by-turn list with text-to-speech triggers
+  // Populate turn-by-turn list
   directionsList.innerHTML = "";
   instructions.forEach((step) => {
     const li = document.createElement("li");
-    li.style.display = "flex";
-    li.style.justifyContent = "space-between";
-    li.style.alignItems = "center";
-    li.style.marginBottom = "8px";
-
-    const textSpan = document.createElement("span");
-    textSpan.textContent = step;
-    li.appendChild(textSpan);
-
-    const speakBtn = document.createElement("button");
-    speakBtn.className = "icon-btn speak-step-btn";
-    speakBtn.innerHTML = '<i data-lucide="volume-2" style="width: 14px; height: 14px;"></i>';
-    speakBtn.title = "Speak step";
-    speakBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      speakDirections(step);
-    });
-    li.appendChild(speakBtn);
-
+    li.textContent = step;
     directionsList.appendChild(li);
   });
 
-  lucide.createIcons();
   document.getElementById("clear-route").disabled = false;
 
   // Auto-open indoor floor plans if destination is a room
   if (endRoomInfo) {
     highlightedRoomId = endRoomInfo.roomId;
     selectBuilding(endRoomInfo.buildingId, endRoomInfo.floorName);
-  }
-
-  // Announce calculation voice response
-  const voiceToggle = document.getElementById("voice-guidance-toggle");
-  if (voiceToggle && voiceToggle.checked) {
-    const distanceText = `${Math.round(totalDistance)} meters`;
-    const timeText = totalTime < 1 ? "less than a minute" : `${Math.round(totalTime)} minutes`;
-    const announcement = `Route found. Total walking distance is ${distanceText}, taking about ${timeText}. Your first step is: ${instructions[0]}`;
-    speakDirections(announcement);
   }
 }
 
