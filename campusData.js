@@ -186,7 +186,7 @@ const CAMPUS_DATA = {
       id: "jonas_hall",
       name: "Jonas Hall (Women's Hostel)",
       description: "Secure residential hall for female students (PU/UG/PG). Includes shared study halls, gym, and in-house recreation center.",
-      coordinates: [12.862598, 77.438893],
+      coordinates: [12.862249, 77.438588],
       category: "hostel",
       floors: {}
     },
@@ -341,7 +341,7 @@ const CAMPUS_DATA = {
     jonas_hall: {
       id: "jonas_hall",
       name: "Jonas Hall (Women's Hostel)",
-      latlng: [12.862598, 77.438893]
+      latlng: [12.862249, 77.438588]
     },
     block4: {
       id: "block4",
