@@ -6,16 +6,6 @@ let currentCategory = "all";
 let highlightedRoomId = null;
 let selectedBuildingId = null;
 
-// Navigation & Geolocation Tracking State
-let activeRouteData = null;       // Store startRoomInfo, endRoomInfo, outdoorRoute, etc.
-let gpsWatchId = null;            // watchPosition listener ID
-let isNavigating = false;         // True if active navigation mode is running
-let autoCenterUser = true;        // True if map automatically pans to center on user
-let navigationInstructions = [];  // Array of computed step texts
-let simulationInterval = null;    // Interval ID for simulated GPS path walks
-let currentSimulatedIndex = 0;    // Coordinate index of active walk simulation
-let offRouteTimer = null;         // Timer to trigger re-routing if off-path
-
 // Walkway Graph Editor State
 let editorActive = false;
 let editorMode = "add"; // 'add', 'connect', 'delete'
@@ -96,6 +86,13 @@ function initMap() {
     if (target.classList.contains('marker-pin') || target.closest('.leaflet-popup')) {
       return;
     }
+    
+    // If mock GPS is active, clicking map simulates walking to that point
+    if (isMockGPS) {
+      handleGPSUpdate(e.latlng.lat, e.latlng.lng);
+      return;
+    }
+
     const coordString = `[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}]`;
     showCoordToast(coordString);
   });
@@ -371,6 +368,8 @@ function getRoomNameById(buildingId, floorName, roomId) {
 // Global user GPS location tracking variables
 let userMarker = null;
 let userHeading = 0;
+let gpsWatchId = null;
+let isMockGPS = false;
 
 // Render GPS indicator on Leaflet map
 function updateUserLocation(lat, lng, heading = null) {
@@ -426,289 +425,114 @@ function setupOrientationListener() {
   }
 }
 
-// start active turn-by-turn navigation or walk simulation
-function startNavigation(isSimulated = false) {
-  if (!activeRouteData) return;
-  
-  stopNavigation(); // Clean any active navigation sessions
-  
-  isNavigating = true;
-  autoCenterUser = true;
-  document.getElementById("nav-banner").style.display = "flex";
-  
-  // Highlight buttons states
-  const startNavBtn = document.getElementById("start-nav-btn");
-  const simNavBtn = document.getElementById("simulate-nav-btn");
-  if (startNavBtn) startNavBtn.innerHTML = '<i data-lucide="square" style="width: 14px; height: 14px; margin-right: 4px;"></i> Stop Nav';
-  if (simNavBtn) simNavBtn.disabled = true;
-  lucide.createIcons();
+// Start watching the GPS position of the user device
+function startGPSTracking() {
+  if (gpsWatchId !== null) return;
 
-  // Attach drag listener to map to disable auto-centering if user interacts
-  map.on("dragstart", handleMapDragStart);
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by your browser!");
+    return;
+  }
 
-  if (isSimulated) {
-    if (!activeRouteData.outdoorRoute || activeRouteData.outdoorRoute.coordinates.length === 0) {
-      alert("No outdoor walking path found to simulate!");
-      stopNavigation();
-      return;
-    }
-    
-    // Start simulation at starting coordinate of the path
-    currentSimulatedIndex = 0;
-    const coords = activeRouteData.outdoorRoute.coordinates;
-    
-    simulationInterval = setInterval(() => {
-      if (currentSimulatedIndex >= coords.length) {
-        clearInterval(simulationInterval);
-        simulationInterval = null;
-        alert("You have arrived at your destination!");
-        stopNavigation();
-        return;
-      }
-      
-      const currPt = coords[currentSimulatedIndex];
-      let heading = userHeading;
-      
-      // Calculate walking heading rotation based on movement direction
-      if (currentSimulatedIndex < coords.length - 1) {
-        const nextPt = coords[currentSimulatedIndex + 1];
-        const dy = nextPt[0] - currPt[0];
-        const dx = nextPt[1] - currPt[1];
-        heading = Math.atan2(dx, dy) * 180 / Math.PI;
-      }
-      
-      updateUserLocation(currPt[0], currPt[1], heading);
-      
-      if (autoCenterUser) {
-        map.setView(currPt, 19);
-      }
-      
-      updateNavigationProgress(currPt[0], currPt[1]);
-      currentSimulatedIndex++;
-    }, 1500);
-  } else {
-    // Live Watch Geolocation
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser!");
-      stopNavigation();
-      return;
-    }
+  const locateMeBtn = document.getElementById("locate-me");
+  if (locateMeBtn) {
+    locateMeBtn.innerHTML = '<i data-lucide="compass" class="animate-spin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Tracking...';
+    locateMeBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    lucide.createIcons();
+  }
 
-    gpsWatchId = navigator.geolocation.watchPosition(
-      (position) => {
-        let lat = position.coords.latitude;
-        let lng = position.coords.longitude;
-        
-        // Apply mock fallback if they are testing far away
-        const campusCenter = CAMPUS_DATA.center;
-        const dist = getDistanceBetweenCoords(lat, lng, campusCenter[0], campusCenter[1]);
-        if (dist > 1200) {
+  gpsWatchId = navigator.geolocation.watchPosition(
+    (position) => {
+      let lat = position.coords.latitude;
+      let lng = position.coords.longitude;
+      
+      const campusCenter = CAMPUS_DATA.center;
+      const distanceToCampus = getDistanceBetweenCoords(lat, lng, campusCenter[0], campusCenter[1]);
+      
+      if (distanceToCampus > 1200) {
+        isMockGPS = true;
+        if (!userMarker) {
           lat = 12.863837;
           lng = 77.434811;
+          alert("Sandbox Mock Active: You are currently outside the Kengeri campus. Simulating your location at the Main Entrance Gate. Click anywhere on the map to simulate walking/moving!");
+        } else {
+          lat = userMarker.getLatLng().lat;
+          lng = userMarker.getLatLng().lng;
         }
+      } else {
+        isMockGPS = false;
+      }
 
-        updateUserLocation(lat, lng, userHeading);
-        
-        if (autoCenterUser) {
-          map.setView([lat, lng], 19);
-        }
-        
-        updateNavigationProgress(lat, lng);
-      },
-      (error) => {
-        console.error("GPS Watch error:", error);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  }
+      handleGPSUpdate(lat, lng);
+    },
+    (error) => {
+      alert(`Error getting location: ${error.message}`);
+      stopGPSTracking();
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+
+  setupOrientationListener();
 }
 
-// Stop current navigation
-function stopNavigation() {
-  isNavigating = false;
-  
-  // Clear timers/watchers
+// Stop watching GPS position
+function stopGPSTracking() {
   if (gpsWatchId !== null) {
     navigator.geolocation.clearWatch(gpsWatchId);
     gpsWatchId = null;
   }
-  if (simulationInterval !== null) {
-    clearInterval(simulationInterval);
-    simulationInterval = null;
-  }
-  if (offRouteTimer !== null) {
-    clearTimeout(offRouteTimer);
-    offRouteTimer = null;
-  }
-  
-  // Reset buttons
-  const startNavBtn = document.getElementById("start-nav-btn");
-  const simNavBtn = document.getElementById("simulate-nav-btn");
-  if (startNavBtn) startNavBtn.innerHTML = '<i data-lucide="play" style="width: 14px; height: 14px; margin-right: 4px;"></i> Start Nav';
-  if (simNavBtn) simNavBtn.disabled = false;
-  lucide.createIcons();
-  
-  // Hide overlays
-  document.getElementById("nav-banner").style.display = "none";
-  document.getElementById("recenter-btn").style.display = "none";
-  
-  // Remove map listeners
-  map.off("dragstart", handleMapDragStart);
-  
-  // Remove highlighted active steps from directions list
-  const steps = document.querySelectorAll("#directions-list li");
-  steps.forEach(li => li.classList.remove("active-step"));
-}
-
-// Map drag listener callback
-function handleMapDragStart() {
-  autoCenterUser = false;
-  document.getElementById("recenter-btn").style.display = "block";
-}
-
-// Recenter map on user location
-function recenterMapOnUser() {
-  autoCenterUser = true;
-  document.getElementById("recenter-btn").style.display = "none";
-  
-  if (userMarker) {
-    map.setView(userMarker.getLatLng(), 19);
+  const locateMeBtn = document.getElementById("locate-me");
+  if (locateMeBtn) {
+    locateMeBtn.innerHTML = '<i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locate Me';
+    locateMeBtn.style.background = '';
+    lucide.createIcons();
   }
 }
 
-// Calculate nearest step node and update highlighted progress
-function updateNavigationProgress(lat, lng) {
-  if (!activeRouteData) return;
-  
-  const activeIdx = findActiveInstructionIndex(lat, lng);
-  const directionsList = document.getElementById("directions-list");
-  
-  // Highlight active instruction in sidebar list
-  const steps = directionsList.children;
-  for (let i = 0; i < steps.length; i++) {
-    if (i === activeIdx) {
-      steps[i].classList.add("active-step");
-      // Scroll into view
-      steps[i].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
-      steps[i].classList.remove("active-step");
-    }
-  }
-  
-  // Update floating map banner text
-  const bannerText = document.getElementById("nav-banner-instruction");
-  if (bannerText && navigationInstructions[activeIdx]) {
-    bannerText.textContent = navigationInstructions[activeIdx];
-  }
-  
-  // Check if off-route (drifted > 30 meters from all outdoor route coordinates)
-  if (activeRouteData.outdoorRoute && activeRouteData.outdoorRoute.coordinates.length > 0) {
-    let minDistance = Infinity;
-    activeRouteData.outdoorRoute.coordinates.forEach(coord => {
-      const dist = getDistanceBetweenCoords(lat, lng, coord[0], coord[1]);
-      if (dist < minDistance) minDistance = dist;
-    });
-    
-    const banner = document.getElementById("nav-banner");
-    if (minDistance > 30) {
-      if (bannerText) bannerText.innerHTML = '<span style="color:#ef4444;"><i data-lucide="alert-triangle"></i> Off-Route! Re-calculating...</span>';
-      lucide.createIcons();
-      
-      if (offRouteTimer === null) {
-        offRouteTimer = setTimeout(() => {
-          autoReRoute(lat, lng);
-        }, 4000);
-      }
-    } else {
-      if (offRouteTimer !== null) {
-        clearTimeout(offRouteTimer);
-        offRouteTimer = null;
-      }
-    }
-  }
-}
+// Handle real-time GPS coordinate updates
+function handleGPSUpdate(lat, lng) {
+  updateUserLocation(lat, lng, userHeading);
 
-// Find closest instruction step index based on location
-function findActiveInstructionIndex(lat, lng) {
-  if (!activeRouteData) return 0;
-  
-  const { startRoomInfo, endRoomInfo, outdoorRoute } = activeRouteData;
-  const numStartIndoor = startRoomInfo ? (startRoomInfo.floorName !== "Ground Floor" ? 2 : 1) : 0;
-  
-  if (!outdoorRoute || outdoorRoute.path.length === 0) {
-    return 0; // Indoor-only
-  }
-  
-  // Find closest node in the outdoor route walkway path
-  let minDistance = Infinity;
-  let nearestNodeIdx = 0;
-  
-  outdoorRoute.path.forEach((nodeId, idx) => {
-    const node = CAMPUS_DATA.nodes[nodeId];
-    if (node) {
-      const dist = getDistanceBetweenCoords(lat, lng, node.latlng[0], node.latlng[1]);
-      if (dist < minDistance) {
-        minDistance = dist;
-        nearestNodeIdx = idx;
-      }
-    }
-  });
-  
-  // Near start entrance
-  if (startRoomInfo && nearestNodeIdx === 0 && minDistance > 10) {
-    return 0;
-  }
-  
-  // Near end entrance
-  if (endRoomInfo && nearestNodeIdx === outdoorRoute.path.length - 1 && minDistance < 10) {
-    return numStartIndoor + outdoorRoute.instructions.length;
-  }
-  
-  // Walking along outdoor walkway
-  let activeOutdoorIdx = nearestNodeIdx;
-  if (activeOutdoorIdx >= outdoorRoute.instructions.length) {
-    activeOutdoorIdx = outdoorRoute.instructions.length - 1;
-  }
-  
-  return numStartIndoor + activeOutdoorIdx;
-}
-
-// Auto recalculate route from current GPS location
-function autoReRoute(lat, lng) {
-  offRouteTimer = null;
-  
-  // Add GPS option to dropdown and select it
   const startSelect = document.getElementById("start-select");
+  
   for (let i = startSelect.options.length - 1; i >= 0; i--) {
     if (startSelect.options[i].value.startsWith("gps:")) {
       startSelect.remove(i);
     }
   }
-  
-  const gpsVal = `gps:${lat}:${lng}`;
-  const option = new Option("My Current Location (Re-routed)", gpsVal);
+
+  const gpsVal = `gps:${lat.toFixed(6)}:${lng.toFixed(6)}`;
+  const label = isMockGPS ? "My Mock Location (Gate)" : "My Current Location";
+  const option = new Option(label, gpsVal);
   startSelect.add(option, 1);
-  startSelect.value = gpsVal;
-  
-  // Re-compute directions
-  getDirections();
-  
-  // Re-start tracking from current watchPosition
-  startNavigation(false);
+
+  const isCurrentlyGPS = startSelect.value.startsWith("gps:") || startSelect.value === "";
+  if (isCurrentlyGPS) {
+    startSelect.value = gpsVal;
+    
+    const endSelect = document.getElementById("end-select");
+    if (endSelect.value) {
+      getDirections(true); // Recalculate quietly
+    }
+  }
 }
 
 // 6. Navigation Route Calculation
-function getDirections() {
+function getDirections(quietRecalculate = false) {
   const startVal = document.getElementById("start-select").value;
   const endVal = document.getElementById("end-select").value;
 
   if (!startVal || !endVal) {
-    alert("Please select both a starting point and a destination!");
+    if (!quietRecalculate) {
+      alert("Please select both a starting point and a destination!");
+    }
     return;
   }
 
   if (startVal === endVal) {
-    alert("Start and destination are the same! Walk time: 0 minutes.");
+    if (!quietRecalculate) {
+      alert("Start and destination are the same! Walk time: 0 minutes.");
+    }
     return;
   }
 
@@ -765,11 +589,21 @@ function getDirections() {
   if (startBuildingId !== endBuildingId) {
     outdoorRoute = findShortestPath(startNode, endNode);
     if (!outdoorRoute) {
-      alert("Sorry, could not find a walking route between these locations.");
+      if (!quietRecalculate) {
+        alert("Sorry, could not find a walking route between these locations.");
+      }
       return;
     }
     totalDistance += outdoorRoute.totalDistance;
     totalTime += outdoorRoute.totalTime;
+
+    // If start is GPS, prepend the user's exact coordinates to route coordinates so line connects to dot
+    if (startBuildingId === "gps") {
+      const parts = startVal.split(":");
+      const lat = parseFloat(parts[1]);
+      const lng = parseFloat(parts[2]);
+      outdoorRoute.coordinates.unshift([lat, lng]);
+    }
   }
 
   // 2. Build indoor starting directions
@@ -788,7 +622,22 @@ function getDirections() {
       totalTime += 0.5;
     }
   } else if (startBuildingId === "gps") {
-    instructions.push("Start from your current GPS location.");
+    const parts = startVal.split(":");
+    const lat = parseFloat(parts[1]);
+    const lng = parseFloat(parts[2]);
+    const nearestNode = CAMPUS_DATA.nodes[startNode];
+    if (nearestNode) {
+      const walkDistToNode = getDistanceBetweenCoords(lat, lng, nearestNode.latlng[0], nearestNode.latlng[1]);
+      if (walkDistToNode > 5) {
+        instructions.push(`Start from your current GPS location and walk ${Math.round(walkDistToNode)} meters to join the walkway near ${nearestNode.name}.`);
+        totalDistance += walkDistToNode;
+        totalTime += walkDistToNode / 80;
+      } else {
+        instructions.push(`Start from your current GPS location near ${nearestNode.name}.`);
+      }
+    } else {
+      instructions.push("Start from your current GPS location.");
+    }
   }
 
   // 3. Append outdoor steps
@@ -826,11 +675,18 @@ function getDirections() {
       className: "animated-path"
     }).addTo(map);
 
-    map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+    if (!quietRecalculate) {
+      map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+    } else if (userMarker) {
+      // Auto-follow/recenter on the user as they walk
+      map.setView(userMarker.getLatLng(), map.getZoom());
+    }
   } else if (startBuildingId !== "gps") {
     // Zoom directly to the single building since it's an indoor-only route
-    const coords = CAMPUS_DATA.buildings[startBuildingId].coordinates;
-    map.setView(coords, 19);
+    if (!quietRecalculate) {
+      const coords = CAMPUS_DATA.buildings[startBuildingId].coordinates;
+      map.setView(coords, 19);
+    }
   }
 
   // Show directions panel
@@ -858,34 +714,6 @@ function getDirections() {
     highlightedRoomId = endRoomInfo.roomId;
     selectBuilding(endRoomInfo.buildingId, endRoomInfo.floorName);
   }
-
-  // Save active route variables for navigation tracking
-  activeRouteData = {
-    startBuildingId,
-    startRoomInfo,
-    endBuildingId,
-    endRoomInfo,
-    outdoorRoute,
-    totalDistance,
-    totalTime
-  };
-  navigationInstructions = instructions;
-
-  // Make sure navigation action controls are reset
-  const startNavBtn = document.getElementById("start-nav-btn");
-  const simNavBtn = document.getElementById("simulate-nav-btn");
-  if (startNavBtn) {
-    startNavBtn.innerHTML = '<i data-lucide="play" style="width: 14px; height: 14px; margin-right: 4px;"></i> Start Nav';
-    startNavBtn.disabled = false;
-  }
-  if (simNavBtn) {
-    simNavBtn.disabled = false;
-  }
-  lucide.createIcons();
-  
-  if (isNavigating) {
-    stopNavigation();
-  }
 }
 
 // Clear currently rendered path and results
@@ -894,8 +722,6 @@ function clearRoute() {
     map.removeLayer(routePolyline);
     routePolyline = null;
   }
-
-  stopNavigation();
 
   document.getElementById("route-panel").style.display = "none";
   document.getElementById("start-select").value = "";
@@ -1135,95 +961,14 @@ function setupEventListeners() {
   const locateMeBtn = document.getElementById("locate-me");
   if (locateMeBtn) {
     locateMeBtn.addEventListener("click", () => {
-      if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser!");
-        return;
-      }
-      
-      locateMeBtn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locating...';
-      lucide.createIcons();
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          let lat = position.coords.latitude;
-          let lng = position.coords.longitude;
-          
-          const campusCenter = CAMPUS_DATA.center;
-          const distanceToCampus = getDistanceBetweenCoords(lat, lng, campusCenter[0], campusCenter[1]);
-          
-          let isMocked = false;
-          if (distanceToCampus > 1200) {
-            lat = 12.863837;
-            lng = 77.434811;
-            isMocked = true;
-          }
-
-          updateUserLocation(lat, lng, userHeading);
-          map.setView([lat, lng], 19);
-
-          const startSelect = document.getElementById("start-select");
-          for (let i = startSelect.options.length - 1; i >= 0; i--) {
-            if (startSelect.options[i].value.startsWith("gps:")) {
-              startSelect.remove(i);
-            }
-          }
-
-          const gpsVal = `gps:${lat}:${lng}`;
-          const label = isMocked ? "My Mock Location (Gate)" : "My Current Location";
-          const option = new Option(label, gpsVal);
-          startSelect.add(option, 1);
-          startSelect.value = gpsVal;
-
-          locateMeBtn.innerHTML = '<i data-lucide="check" style="width: 14px; height: 14px; margin-right: 6px;"></i> Located';
-          lucide.createIcons();
-
-          if (isMocked) {
-            alert("Sandbox Mock Active: You are currently outside the Kengeri campus. Simulating your location at the Main Entrance Gate for pathway routing tests!");
-          }
-
-          setTimeout(() => {
-            locateMeBtn.innerHTML = '<i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locate Me';
-            lucide.createIcons();
-          }, 3000);
-
-          setupOrientationListener();
-        },
-        (error) => {
-          alert(`Error getting location: ${error.message}`);
-          locateMeBtn.innerHTML = '<i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locate Me';
-          lucide.createIcons();
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-  }
-
-  // GPS Navigation Controls
-  const startNavBtn = document.getElementById("start-nav-btn");
-  if (startNavBtn) {
-    startNavBtn.addEventListener("click", () => {
-      if (isNavigating) {
-        stopNavigation();
+      if (gpsWatchId !== null) {
+        if (userMarker) {
+          map.setView(userMarker.getLatLng(), 19);
+        }
       } else {
-        startNavigation(false);
+        startGPSTracking();
       }
     });
-  }
-
-  const simulateNavBtn = document.getElementById("simulate-nav-btn");
-  if (simulateNavBtn) {
-    simulateNavBtn.addEventListener("click", () => {
-      startNavigation(true);
-    });
-  }
-
-  const recenterBtn = document.getElementById("recenter-btn");
-  if (recenterBtn) {
-    recenterBtn.addEventListener("click", recenterMapOnUser);
-  }
-
-  const endNavBannerBtn = document.getElementById("end-nav-banner-btn");
-  if (endNavBannerBtn) {
-    endNavBannerBtn.addEventListener("click", stopNavigation);
   }
 
   // Walkway Editor Listeners

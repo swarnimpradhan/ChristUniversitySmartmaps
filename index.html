@@ -171,15 +171,6 @@
             </div>
           </div>
           
-          <div class="nav-actions-container" style="display: flex; gap: 8px; margin: 12px 0;">
-            <button id="start-nav-btn" class="btn primary-btn" style="flex: 1; padding: 10px; font-size: 13px; background: linear-gradient(135deg, #10b981, #047857) !important;">
-              <i data-lucide="play" style="width: 14px; height: 14px; margin-right: 4px;"></i> Start Nav
-            </button>
-            <button id="simulate-nav-btn" class="btn secondary-btn" style="flex: 1; padding: 10px; font-size: 13px;">
-              <i data-lucide="play-circle" style="width: 14px; height: 14px; margin-right: 4px;"></i> Simulate Walk
-            </button>
-          </div>
-          
           <h4>Step-by-Step Directions</h4>
           <ol class="directions-list" id="directions-list">
             <!-- Dynamically populated instructions -->
@@ -227,20 +218,6 @@
     <main class="map-area">
       <!-- Leaflet map container -->
       <div id="map"></div>
-
-      <!-- Floating Map Overlays -->
-      <button id="recenter-btn" class="map-overlay-btn" style="display: none;" title="Recenter Map on User">
-        <i data-lucide="compass"></i> Recenter
-      </button>
-      
-      <!-- Live Navigation Floating Banner -->
-      <div id="nav-banner" class="nav-banner-panel glass-panel" style="display: none;">
-        <div class="nav-banner-content">
-          <i data-lucide="navigation-2" class="nav-banner-icon"></i>
-          <span id="nav-banner-instruction">Starting Navigation...</span>
-        </div>
-        <button id="end-nav-banner-btn" class="end-nav-btn" title="End Navigation">End</button>
-      </div>
 
       <!-- Floor Plan Viewer: Overlays on top of the Map dynamically -->
       <div id="floor-plan-viewer" class="floor-plan-viewer glass-panel" style="display: none;">
