@@ -105,16 +105,139 @@ button, input, select {
   overflow: hidden;
 }
 
+/* Sidebar Collapse Button (Mobile Only) */
+.collapse-btn {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: transform var(--transition-fast), background-color var(--transition-fast);
+}
+
+.collapse-btn:hover {
+  transform: scale(1.05);
+  background: var(--border-light);
+  color: var(--text-primary);
+}
+
+.collapse-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* Mobile responsive adjustments */
 @media (max-width: 900px) {
   .app-container {
-    grid-template-columns: 1fr;
-    grid-template-rows: 50% 50%;
+    position: relative;
+    display: block;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
   }
+
+  .map-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
   .sidebar {
-    height: 50vh;
-    border-right: none !important;
-    border-bottom: 2px solid var(--border-light);
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 380px;
+    max-height: calc(100% - 32px);
+    height: auto;
+    bottom: auto;
+    z-index: 1000;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-glass);
+    background: var(--bg-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-lg);
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar-header {
+    padding: 14px 16px;
+  }
+
+  .sidebar-content {
+    transition: opacity 0.25s ease;
+    opacity: 1;
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+  }
+
+  .collapse-btn {
+    display: flex !important;
+  }
+
+  /* When collapsed, restrict height to header only */
+  .sidebar.collapsed {
+    max-height: 72px;
+  }
+
+  .sidebar.collapsed .sidebar-content {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Floor Plan Viewer Responsive overrides */
+  .floor-plan-viewer {
+    width: auto !important;
+    left: 16px !important;
+    right: 16px !important;
+    bottom: 16px !important;
+    max-height: 55% !important;
+    overflow-y: auto !important;
+    z-index: 1010 !important; /* sits on top of collapsed sidebar if needed */
+  }
+
+  /* Walkway Editor Panel Responsive overrides */
+  .walkway-editor {
+    width: auto !important;
+    left: 16px !important;
+    right: 16px !important;
+    top: 16px !important;
+    bottom: auto !important;
+    max-height: calc(100% - 32px) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: calc(100% - 24px);
+  }
+
+  .sidebar.collapsed {
+    max-height: 68px;
+  }
+
+  .floor-plan-viewer {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+  }
+
+  .walkway-editor {
+    left: 12px !important;
+    right: 12px !important;
+    top: 12px !important;
   }
 }
 

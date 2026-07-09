@@ -1024,6 +1024,22 @@ function setupEventListeners() {
     }
   });
 
+  // Sidebar Collapse Toggle (Mobile Only)
+  const collapseToggle = document.getElementById("sidebar-collapse-toggle");
+  if (collapseToggle) {
+    collapseToggle.addEventListener("click", () => {
+      const sidebar = document.querySelector(".sidebar");
+      sidebar.classList.toggle("collapsed");
+      
+      const isCollapsed = sidebar.classList.contains("collapsed");
+      collapseToggle.innerHTML = isCollapsed 
+        ? '<i data-lucide="chevron-up"></i>' 
+        : '<i data-lucide="chevron-down"></i>';
+      collapseToggle.setAttribute("title", isCollapsed ? "Expand Panel" : "Minimize Panel");
+      lucide.createIcons();
+    });
+  }
+
   // Category Filter Chips
   const chips = document.querySelectorAll(".chip");
   chips.forEach(chip => {
