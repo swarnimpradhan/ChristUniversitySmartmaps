@@ -171,6 +171,27 @@
             </div>
           </div>
           
+          <!-- GPS Walk Tracking controls -->
+          <div id="tracking-status-container" style="margin: 10px 0; padding: 10px; background: rgba(59, 130, 246, 0.08); border-radius: 8px; border: 1px dashed rgba(59, 130, 246, 0.3); display: none; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                <span id="tracking-dot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: pulse 1.5s infinite;"></span>
+                Live GPS Tracking: <strong id="tracking-text" style="color: var(--text-primary);">Inactive</strong>
+              </span>
+              <button id="toggle-center-map" class="icon-btn" title="Toggle Auto-Center Map" style="background: none; border: none; color: var(--primary); cursor: pointer; padding: 2px;">
+                <i data-lucide="crosshair" style="width: 16px; height: 16px;"></i>
+              </button>
+            </div>
+            <div id="walk-simulator-controls" style="display: flex; gap: 6px; margin-top: 4px;">
+              <button id="start-walk-simulation" class="btn primary-btn" style="flex: 1; padding: 6px 12px; font-size: 11px; height: auto;">
+                <i data-lucide="play" style="width: 12px; height: 12px; margin-right: 4px;"></i> Simulate Walk
+              </button>
+              <button id="deviate-walk-simulation" class="btn secondary-btn" style="flex: 1; padding: 6px 12px; font-size: 11px; height: auto; display: none;">
+                <i data-lucide="navigation-off" style="width: 12px; height: 12px; margin-right: 4px;"></i> Deviate Route
+              </button>
+            </div>
+          </div>
+          
           <h4>Step-by-Step Directions</h4>
           <ol class="directions-list" id="directions-list">
             <!-- Dynamically populated instructions -->

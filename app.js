@@ -6,6 +6,14 @@ let currentCategory = "all";
 let highlightedRoomId = null;
 let selectedBuildingId = null;
 
+// Live GPS Tracking & Walk Simulation State
+let activeWatchId = null;
+let isMockLocationActive = false;
+let autoCenterMap = true;
+let currentRouteCoordinates = [];
+let simulationInterval = null;
+let simulationIndex = 0;
+
 // Walkway Graph Editor State
 let editorActive = false;
 let editorMode = "add"; // 'add', 'connect', 'delete'
@@ -81,18 +89,17 @@ function initMap() {
       return;
     }
     
+    // Support manual walking simulation via map clicks when tracking is active in mock mode
+    if (activeWatchId !== null && isMockLocationActive) {
+      simulateUserMove(e.latlng.lat, e.latlng.lng);
+      return;
+    }
+    
     // Avoid toast if click was on a marker pin or popup
     const target = e.originalEvent.target;
     if (target.classList.contains('marker-pin') || target.closest('.leaflet-popup')) {
       return;
     }
-    
-    // If mock GPS is active, clicking map simulates walking to that point
-    if (isMockGPS) {
-      handleGPSUpdate(e.latlng.lat, e.latlng.lng);
-      return;
-    }
-
     const coordString = `[${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}]`;
     showCoordToast(coordString);
   });
@@ -368,8 +375,6 @@ function getRoomNameById(buildingId, floorName, roomId) {
 // Global user GPS location tracking variables
 let userMarker = null;
 let userHeading = 0;
-let gpsWatchId = null;
-let isMockGPS = false;
 
 // Render GPS indicator on Leaflet map
 function updateUserLocation(lat, lng, heading = null) {
@@ -396,6 +401,283 @@ function updateUserLocation(lat, lng, heading = null) {
   } else {
     userMarker = L.marker(userCoords, { icon: userIcon }).addTo(map);
   }
+}
+
+// Helper: get distance from point P to line segment AB (in meters)
+function getDistanceToSegment(latP, lngP, latA, lngA, latB, lngB) {
+  const yP = latP;
+  const xP = lngP * Math.cos(latP * Math.PI / 180);
+  const yA = latA;
+  const xA = lngA * Math.cos(latP * Math.PI / 180);
+  const yB = latB;
+  const xB = lngB * Math.cos(latP * Math.PI / 180);
+
+  const dx = xB - xA;
+  const dy = yB - yA;
+  const lenSq = dx * dx + dy * dy;
+
+  if (lenSq === 0) {
+    return getDistanceBetweenCoords(latP, lngP, latA, lngA);
+  }
+
+  let t = ((xP - xA) * dx + (yP - yA) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t)); // clamp to segment
+
+  const closestLat = yA + t * dy;
+  const closestLng = (xA + t * dx) / Math.cos(closestLat * Math.PI / 180);
+
+  return getDistanceBetweenCoords(latP, lngP, closestLat, closestLng);
+}
+
+// Highlight the current step based on user GPS proximity to path coordinates
+function highlightCurrentStep(lat, lng) {
+  if (!currentRouteCoordinates || currentRouteCoordinates.length < 2) return;
+  let closestSegmentIdx = 0;
+  let minDistance = Infinity;
+
+  for (let i = 0; i < currentRouteCoordinates.length - 1; i++) {
+    const ptA = currentRouteCoordinates[i];
+    const ptB = currentRouteCoordinates[i + 1];
+    const dist = getDistanceToSegment(lat, lng, ptA[0], ptA[1], ptB[0], ptB[1]);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestSegmentIdx = i;
+    }
+  }
+
+  const listItems = document.querySelectorAll("#directions-list li");
+  if (listItems.length === 0) return;
+
+  listItems.forEach((li, idx) => {
+    if (idx === closestSegmentIdx) {
+      li.classList.add("active-step");
+      li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      li.classList.remove("active-step");
+    }
+  });
+}
+
+// Check if user has wandered off the planned route and auto-recalculate
+function checkRouteDeviation(lat, lng) {
+  if (!routePolyline || !currentRouteCoordinates || currentRouteCoordinates.length < 2) return;
+
+  let minDistance = Infinity;
+  for (let i = 0; i < currentRouteCoordinates.length - 1; i++) {
+    const ptA = currentRouteCoordinates[i];
+    const ptB = currentRouteCoordinates[i + 1];
+    const dist = getDistanceToSegment(lat, lng, ptA[0], ptA[1], ptB[0], ptB[1]);
+    if (dist < minDistance) {
+      minDistance = dist;
+    }
+  }
+
+  // If user is > 20 meters away, automatically recalculate the path starting from their location
+  if (minDistance > 20) {
+    showToastNotification("Off-route detected! Recalculating path...");
+    autoRecalculateRoute(lat, lng);
+  }
+}
+
+// Automatically recalculate path from user's current coordinates to their original destination
+function autoRecalculateRoute(lat, lng) {
+  const startSelect = document.getElementById("start-select");
+  const endSelect = document.getElementById("end-select");
+  if (!endSelect.value) return;
+
+  // Remove existing gps options
+  for (let i = startSelect.options.length - 1; i >= 0; i--) {
+    if (startSelect.options[i].value.startsWith("gps:")) {
+      startSelect.remove(i);
+    }
+  }
+
+  const gpsVal = `gps:${lat}:${lng}`;
+  const label = isMockLocationActive ? "My Mock Location (Recalculated)" : "My Current Location";
+  const option = new Option(label, gpsVal);
+  startSelect.add(option, 1);
+  startSelect.value = gpsVal;
+
+  getDirections();
+}
+
+// Display temporary user notification/toast (like premium maps apps)
+function showToastNotification(message) {
+  const existingToast = document.getElementById("gps-routing-toast");
+  if (existingToast) existingToast.remove();
+
+  const toast = document.createElement("div");
+  toast.id = "gps-routing-toast";
+  toast.style.position = "fixed";
+  toast.style.bottom = "20px";
+  toast.style.left = "50%";
+  toast.style.transform = "translateX(-50%)";
+  toast.style.background = "#1f2937";
+  toast.style.color = "#fff";
+  toast.style.padding = "10px 20px";
+  toast.style.borderRadius = "8px";
+  toast.style.zIndex = "1000";
+  toast.style.fontSize = "13px";
+  toast.style.fontWeight = "600";
+  toast.style.border = "1px solid #10b981";
+  toast.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.3)";
+  toast.textContent = message;
+
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// Start watching device GPS
+function startTracking() {
+  if (activeWatchId) return;
+
+  const locateMeBtn = document.getElementById("locate-me");
+  if (locateMeBtn) {
+    locateMeBtn.innerHTML = '<i data-lucide="crosshair" style="width: 14px; height: 14px; margin-right: 6px;"></i> Tracking...';
+    locateMeBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+    lucide.createIcons();
+  }
+
+  activeWatchId = navigator.geolocation.watchPosition(
+    (position) => {
+      let lat = position.coords.latitude;
+      let lng = position.coords.longitude;
+
+      const campusCenter = CAMPUS_DATA.center;
+      const distanceToCampus = getDistanceBetweenCoords(lat, lng, campusCenter[0], campusCenter[1]);
+
+      if (distanceToCampus > 1200) {
+        lat = 12.863837;
+        lng = 77.434811;
+        isMockLocationActive = true;
+      } else {
+        isMockLocationActive = false;
+      }
+
+      simulateUserMove(lat, lng);
+    },
+    (error) => {
+      console.error("GPS Watch error:", error);
+      stopTracking();
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+
+  document.getElementById("tracking-status-container").style.display = "flex";
+  const dot = document.getElementById("tracking-dot");
+  const text = document.getElementById("tracking-text");
+  if (dot && text) {
+    dot.style.backgroundColor = "#10b981";
+    text.textContent = isMockLocationActive ? "Active (Mock)" : "Active (GPS)";
+  }
+}
+
+// Stop GPS watching
+function stopTracking() {
+  if (activeWatchId) {
+    navigator.geolocation.clearWatch(activeWatchId);
+    activeWatchId = null;
+  }
+
+  const locateMeBtn = document.getElementById("locate-me");
+  if (locateMeBtn) {
+    locateMeBtn.innerHTML = '<i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locate Me';
+    locateMeBtn.style.background = "";
+    lucide.createIcons();
+  }
+
+  stopWalkingSimulation();
+
+  document.getElementById("tracking-status-container").style.display = "none";
+}
+
+// Handle simulated or live coordinates updates
+function simulateUserMove(lat, lng) {
+  updateUserLocation(lat, lng, userHeading);
+  
+  if (autoCenterMap) {
+    map.setView([lat, lng]);
+  }
+
+  const startSelect = document.getElementById("start-select");
+  if (startSelect.value.startsWith("gps:")) {
+    const gpsVal = `gps:${lat}:${lng}`;
+    const label = isMockLocationActive ? "My Mock Location" : "My Current Location";
+    
+    let exists = false;
+    for (let i = 0; i < startSelect.options.length; i++) {
+      if (startSelect.options[i].value === gpsVal) {
+        exists = true;
+        break;
+      }
+    }
+
+    if (!exists) {
+      for (let i = startSelect.options.length - 1; i >= 0; i--) {
+        if (startSelect.options[i].value.startsWith("gps:")) {
+          startSelect.remove(i);
+        }
+      }
+      startSelect.add(new Option(label, gpsVal), 1);
+    }
+    startSelect.value = gpsVal;
+  }
+
+  highlightCurrentStep(lat, lng);
+  checkRouteDeviation(lat, lng);
+}
+
+// Simulate walking along the calculated path
+function startWalkingSimulation() {
+  if (simulationInterval) {
+    stopWalkingSimulation();
+    return;
+  }
+  if (!currentRouteCoordinates || currentRouteCoordinates.length < 2) {
+    alert("Please calculate a route first before starting the walk simulation!");
+    return;
+  }
+
+  simulationIndex = 0;
+  const startSimBtn = document.getElementById("start-walk-simulation");
+  const deviateBtn = document.getElementById("deviate-walk-simulation");
+
+  if (startSimBtn) {
+    startSimBtn.innerHTML = '<i data-lucide="square" style="width: 12px; height: 12px; margin-right: 4px;"></i> Stop Sim';
+    lucide.createIcons();
+  }
+  if (deviateBtn) deviateBtn.style.display = "block";
+
+  showToastNotification("Starting walk simulation along the pathway...");
+
+  simulationInterval = setInterval(() => {
+    if (simulationIndex >= currentRouteCoordinates.length) {
+      stopWalkingSimulation();
+      showToastNotification("Walk simulation completed successfully!");
+      return;
+    }
+
+    const currentCoords = currentRouteCoordinates[simulationIndex];
+    simulateUserMove(currentCoords[0], currentCoords[1]);
+    simulationIndex++;
+  }, 1500);
+}
+
+// Stop walking simulation
+function stopWalkingSimulation() {
+  if (simulationInterval) {
+    clearInterval(simulationInterval);
+    simulationInterval = null;
+  }
+
+  const startSimBtn = document.getElementById("start-walk-simulation");
+  const deviateBtn = document.getElementById("deviate-walk-simulation");
+
+  if (startSimBtn) {
+    startSimBtn.innerHTML = '<i data-lucide="play" style="width: 12px; height: 12px; margin-right: 4px;"></i> Simulate Walk';
+    lucide.createIcons();
+  }
+  if (deviateBtn) deviateBtn.style.display = "none";
 }
 
 // Listen to absolute compass device orientation events
@@ -425,114 +707,18 @@ function setupOrientationListener() {
   }
 }
 
-// Start watching the GPS position of the user device
-function startGPSTracking() {
-  if (gpsWatchId !== null) return;
-
-  if (!navigator.geolocation) {
-    alert("Geolocation is not supported by your browser!");
-    return;
-  }
-
-  const locateMeBtn = document.getElementById("locate-me");
-  if (locateMeBtn) {
-    locateMeBtn.innerHTML = '<i data-lucide="compass" class="animate-spin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Tracking...';
-    locateMeBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-    lucide.createIcons();
-  }
-
-  gpsWatchId = navigator.geolocation.watchPosition(
-    (position) => {
-      let lat = position.coords.latitude;
-      let lng = position.coords.longitude;
-      
-      const campusCenter = CAMPUS_DATA.center;
-      const distanceToCampus = getDistanceBetweenCoords(lat, lng, campusCenter[0], campusCenter[1]);
-      
-      if (distanceToCampus > 1200) {
-        isMockGPS = true;
-        if (!userMarker) {
-          lat = 12.863837;
-          lng = 77.434811;
-          alert("Sandbox Mock Active: You are currently outside the Kengeri campus. Simulating your location at the Main Entrance Gate. Click anywhere on the map to simulate walking/moving!");
-        } else {
-          lat = userMarker.getLatLng().lat;
-          lng = userMarker.getLatLng().lng;
-        }
-      } else {
-        isMockGPS = false;
-      }
-
-      handleGPSUpdate(lat, lng);
-    },
-    (error) => {
-      alert(`Error getting location: ${error.message}`);
-      stopGPSTracking();
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
-
-  setupOrientationListener();
-}
-
-// Stop watching GPS position
-function stopGPSTracking() {
-  if (gpsWatchId !== null) {
-    navigator.geolocation.clearWatch(gpsWatchId);
-    gpsWatchId = null;
-  }
-  const locateMeBtn = document.getElementById("locate-me");
-  if (locateMeBtn) {
-    locateMeBtn.innerHTML = '<i data-lucide="map-pin" style="width: 14px; height: 14px; margin-right: 6px;"></i> Locate Me';
-    locateMeBtn.style.background = '';
-    lucide.createIcons();
-  }
-}
-
-// Handle real-time GPS coordinate updates
-function handleGPSUpdate(lat, lng) {
-  updateUserLocation(lat, lng, userHeading);
-
-  const startSelect = document.getElementById("start-select");
-  
-  for (let i = startSelect.options.length - 1; i >= 0; i--) {
-    if (startSelect.options[i].value.startsWith("gps:")) {
-      startSelect.remove(i);
-    }
-  }
-
-  const gpsVal = `gps:${lat.toFixed(6)}:${lng.toFixed(6)}`;
-  const label = isMockGPS ? "My Mock Location (Gate)" : "My Current Location";
-  const option = new Option(label, gpsVal);
-  startSelect.add(option, 1);
-
-  const isCurrentlyGPS = startSelect.value.startsWith("gps:") || startSelect.value === "";
-  if (isCurrentlyGPS) {
-    startSelect.value = gpsVal;
-    
-    const endSelect = document.getElementById("end-select");
-    if (endSelect.value) {
-      getDirections(true); // Recalculate quietly
-    }
-  }
-}
-
 // 6. Navigation Route Calculation
-function getDirections(quietRecalculate = false) {
+function getDirections() {
   const startVal = document.getElementById("start-select").value;
   const endVal = document.getElementById("end-select").value;
 
   if (!startVal || !endVal) {
-    if (!quietRecalculate) {
-      alert("Please select both a starting point and a destination!");
-    }
+    alert("Please select both a starting point and a destination!");
     return;
   }
 
   if (startVal === endVal) {
-    if (!quietRecalculate) {
-      alert("Start and destination are the same! Walk time: 0 minutes.");
-    }
+    alert("Start and destination are the same! Walk time: 0 minutes.");
     return;
   }
 
@@ -589,21 +775,11 @@ function getDirections(quietRecalculate = false) {
   if (startBuildingId !== endBuildingId) {
     outdoorRoute = findShortestPath(startNode, endNode);
     if (!outdoorRoute) {
-      if (!quietRecalculate) {
-        alert("Sorry, could not find a walking route between these locations.");
-      }
+      alert("Sorry, could not find a walking route between these locations.");
       return;
     }
     totalDistance += outdoorRoute.totalDistance;
     totalTime += outdoorRoute.totalTime;
-
-    // If start is GPS, prepend the user's exact coordinates to route coordinates so line connects to dot
-    if (startBuildingId === "gps") {
-      const parts = startVal.split(":");
-      const lat = parseFloat(parts[1]);
-      const lng = parseFloat(parts[2]);
-      outdoorRoute.coordinates.unshift([lat, lng]);
-    }
   }
 
   // 2. Build indoor starting directions
@@ -622,22 +798,7 @@ function getDirections(quietRecalculate = false) {
       totalTime += 0.5;
     }
   } else if (startBuildingId === "gps") {
-    const parts = startVal.split(":");
-    const lat = parseFloat(parts[1]);
-    const lng = parseFloat(parts[2]);
-    const nearestNode = CAMPUS_DATA.nodes[startNode];
-    if (nearestNode) {
-      const walkDistToNode = getDistanceBetweenCoords(lat, lng, nearestNode.latlng[0], nearestNode.latlng[1]);
-      if (walkDistToNode > 5) {
-        instructions.push(`Start from your current GPS location and walk ${Math.round(walkDistToNode)} meters to join the walkway near ${nearestNode.name}.`);
-        totalDistance += walkDistToNode;
-        totalTime += walkDistToNode / 80;
-      } else {
-        instructions.push(`Start from your current GPS location near ${nearestNode.name}.`);
-      }
-    } else {
-      instructions.push("Start from your current GPS location.");
-    }
+    instructions.push("Start from your current GPS location.");
   }
 
   // 3. Append outdoor steps
@@ -675,15 +836,12 @@ function getDirections(quietRecalculate = false) {
       className: "animated-path"
     }).addTo(map);
 
-    if (!quietRecalculate) {
-      map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
-    } else if (userMarker) {
-      // Auto-follow/recenter on the user as they walk
-      map.setView(userMarker.getLatLng(), map.getZoom());
-    }
-  } else if (startBuildingId !== "gps") {
-    // Zoom directly to the single building since it's an indoor-only route
-    if (!quietRecalculate) {
+    map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+    currentRouteCoordinates = outdoorRoute.coordinates;
+  } else {
+    currentRouteCoordinates = [];
+    if (startBuildingId !== "gps") {
+      // Zoom directly to the single building since it's an indoor-only route
       const coords = CAMPUS_DATA.buildings[startBuildingId].coordinates;
       map.setView(coords, 19);
     }
@@ -701,13 +859,19 @@ function getDirections(quietRecalculate = false) {
 
   // Populate turn-by-turn list
   directionsList.innerHTML = "";
-  instructions.forEach((step) => {
+  instructions.forEach((step, idx) => {
     const li = document.createElement("li");
     li.textContent = step;
+    li.dataset.index = idx;
     directionsList.appendChild(li);
   });
 
   document.getElementById("clear-route").disabled = false;
+
+  // If tracking is active, immediately run highlight logic
+  if (userMarker) {
+    highlightCurrentStep(userMarker.getLatLng().lat, userMarker.getLatLng().lng);
+  }
 
   // Auto-open indoor floor plans if destination is a room
   if (endRoomInfo) {
@@ -727,6 +891,10 @@ function clearRoute() {
   document.getElementById("start-select").value = "";
   document.getElementById("end-select").value = "";
   document.getElementById("clear-route").disabled = true;
+
+  // Clean up GPS tracking/simulation states on route clear
+  stopTracking();
+  currentRouteCoordinates = [];
 
   // Reset zoom to campus center
   map.setView(CAMPUS_DATA.center, CAMPUS_DATA.zoom);
@@ -955,19 +1123,52 @@ function setupEventListeners() {
       highlightedRoomId = roomId;
       selectBuilding(buildingId, floorName);
     });
-  });
-
-  // GPS Geolocation trigger
+  });  // GPS Geolocation trigger
   const locateMeBtn = document.getElementById("locate-me");
   if (locateMeBtn) {
     locateMeBtn.addEventListener("click", () => {
-      if (gpsWatchId !== null) {
-        if (userMarker) {
-          map.setView(userMarker.getLatLng(), 19);
-        }
-      } else {
-        startGPSTracking();
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser!");
+        return;
       }
+      
+      if (activeWatchId !== null) {
+        stopTracking();
+      } else {
+        startTracking();
+        setupOrientationListener();
+      }
+    });
+  }
+
+  // Auto-Center Map toggle button
+  const centerMapBtn = document.getElementById("toggle-center-map");
+  if (centerMapBtn) {
+    centerMapBtn.addEventListener("click", () => {
+      autoCenterMap = !autoCenterMap;
+      centerMapBtn.style.color = autoCenterMap ? "var(--accent-primary)" : "var(--text-muted)";
+      if (autoCenterMap && userMarker) {
+        map.setView(userMarker.getLatLng());
+      }
+    });
+  }
+
+  // Walk simulator trigger
+  const startSimBtn = document.getElementById("start-walk-simulation");
+  if (startSimBtn) {
+    startSimBtn.addEventListener("click", startWalkingSimulation);
+  }
+
+  // Walk simulator route deviation trigger (deviate by adding ~40 meters offset to simulate wandering off)
+  const deviateBtn = document.getElementById("deviate-walk-simulation");
+  if (deviateBtn) {
+    deviateBtn.addEventListener("click", () => {
+      if (!userMarker) return;
+      const curLatLng = userMarker.getLatLng();
+      const offsetLat = curLatLng.lat - 0.00035;
+      const offsetLng = curLatLng.lng + 0.00035;
+      simulateUserMove(offsetLat, offsetLng);
+      showToastNotification("Route deviation simulated! Recalculating path...");
     });
   }
 

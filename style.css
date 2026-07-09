@@ -630,6 +630,22 @@ h3 {
   border-bottom: none;
 }
 
+.directions-list li.active-step {
+  background: rgba(16, 185, 129, 0.12);
+  border-left: 4px solid var(--accent-green, #10b981);
+  padding: 6px 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: all var(--transition-fast);
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.5; }
+}
+
 /* Timetable / Schedule Widget */
 .schedule-section {
   border-top: 1px solid var(--border-light);
